@@ -22,9 +22,8 @@ import (
 func invokeUnpack(decompressedArchive io.ReadCloser,
 	dest string,
 	options *archive.TarOptions, root string) error {
-	// Windows is different to Linux here because Windows does not support
-	// chroot. Hence there is no point sandboxing a chrooted process to
-	// do the unpack. We call inline instead within the daemon process.
+	// This is normally how Windows would unpack the archive, but since
+	// we need reduced resources we will unpack the archive in the daemon process
 	return archive.Unpack(decompressedArchive, longpath.AddPrefix(dest), options)
 }
 

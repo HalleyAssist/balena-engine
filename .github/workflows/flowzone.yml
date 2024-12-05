@@ -1,18 +1,14 @@
-name: Flowzone
+name: Build Docker
 
 on:
-  pull_request:
-    types: [opened, synchronize, closed]
-    branches:
-      - "main"
-      - "master"
+  push:
 
 jobs:
-  flowzone:
-    name: Flowzone
-    uses: product-os/flowzone/.github/workflows/flowzone.yml@master
-    secrets: inherit
-    with:
-      # https://github.com/golang/go/blob/master/src/go/build/syslist.go
-      custom_publish_matrix: "linux/arm/v5,linux/arm/v6,linux/arm/v7,linux/arm64,linux/amd64"
-      cloudflare_website: "balena-engine"
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build Docker image
+      run: make dynbinary
