@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -723,6 +724,8 @@ func (d *Driver) ApplyDiff(id string, parent string, diff io.Reader) (size int64
 		// file as the tar archive gets unpacked
 		syscall.Sync()
 	}
+
+	runtime.GC()
 
 	return directory.Size(context.TODO(), applyDir)
 }
