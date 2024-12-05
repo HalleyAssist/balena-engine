@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"runtime"
+	"runtime/debug"
+	"time"
 
 	"github.com/containerd/containerd/cmd/containerd"
 	containerdShimRuncV2 "github.com/containerd/containerd/cmd/containerd-shim-runc-v2"
@@ -22,6 +24,12 @@ func main() {
 	}
 
 	command := filepath.Base(os.Args[0])
+
+	go func() {
+		for range time.Tick(30 * time.Second) {
+			debug.FreeOSMemory()
+		}
+	}()
 
 	switch command {
 	case "balena", "balena-engine":
