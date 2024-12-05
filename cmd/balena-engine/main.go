@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/containerd/containerd/cmd/containerd"
 	containerdShimRuncV2 "github.com/containerd/containerd/cmd/containerd-shim-runc-v2"
@@ -25,18 +26,25 @@ func main() {
 
 	switch command {
 	case "balena", "balena-engine":
+		runtime.GOMAXPROCS(1)
 		docker.Main()
 	case "balenad", "balena-engine-daemon":
+		runtime.GOMAXPROCS(2)
 		dockerd.Main()
 	case "balena-containerd", "balena-engine-containerd":
+		runtime.GOMAXPROCS(1)
 		containerd.Main()
 	case "balena-containerd-shim-runc-v2":
+		runtime.GOMAXPROCS(1)
 		containerdShimRuncV2.Main()
 	case "balena-containerd-ctr", "balena-engine-containerd-ctr":
+		runtime.GOMAXPROCS(1)
 		ctr.Main()
 	case "balena-runc", "balena-engine-runc":
+		runtime.GOMAXPROCS(1)
 		runc.Main()
 	case "balena-proxy", "balena-engine-proxy":
+		runtime.GOMAXPROCS(1)
 		proxy.Main()
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown command: %v\n", command)

@@ -154,9 +154,9 @@ func setRuntime() {
 		}
 	}()
 	if os.Getenv("GOMAXPROCS") == "" {
-		// If GOMAXPROCS hasn't been set, we default to a value of 2 to reduce
+		// If GOMAXPROCS hasn't been set, we default to a value of 1 to reduce
 		// the number of Go stacks present in the shim.
-		runtime.GOMAXPROCS(2)
+		runtime.GOMAXPROCS(1)
 	}
 }
 

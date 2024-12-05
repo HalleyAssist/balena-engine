@@ -64,7 +64,7 @@ func Command(ctx context.Context, config *CommandConfig) (*exec.Cmd, error) {
 	cmd.Dir = config.Path
 	cmd.Env = append(
 		os.Environ(),
-		"GOMAXPROCS=2",
+		"GOMAXPROCS=1",
 		fmt.Sprintf("%s=%s", ttrpcAddressEnv, config.TTRPCAddress),
 	)
 	if config.SchedCore {

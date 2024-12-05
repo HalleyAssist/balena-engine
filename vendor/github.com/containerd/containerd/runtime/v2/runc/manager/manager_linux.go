@@ -90,7 +90,7 @@ func newCommand(ctx context.Context, id, containerdBinary, containerdAddress, co
 	}
 	cmd := exec.Command(self, args...)
 	cmd.Dir = cwd
-	cmd.Env = append(os.Environ(), "GOMAXPROCS=4")
+	cmd.Env = append(os.Environ(), "GOMAXPROCS=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}

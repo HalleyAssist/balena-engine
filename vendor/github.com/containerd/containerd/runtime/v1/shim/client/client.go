@@ -218,7 +218,7 @@ func newCommand(binary, daemonAddress string, debug bool, config shim.Config, so
 	// will be mounted by the shim
 	cmd.SysProcAttr = getSysProcAttr()
 	cmd.ExtraFiles = append(cmd.ExtraFiles, socket)
-	cmd.Env = append(os.Environ(), "GOMAXPROCS=2")
+	cmd.Env = append(os.Environ(), "GOMAXPROCS=1")
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	return cmd, nil
