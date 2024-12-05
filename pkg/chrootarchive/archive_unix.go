@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/longpath"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/pkg/errors"
 )
@@ -22,9 +22,26 @@ import (
 func invokeUnpack(decompressedArchive io.ReadCloser,
 	dest string,
 	options *archive.TarOptions, root string) error {
+
+	if root != "" {
+		relDest, err := filepath.Rel(root, dest)
+		if err != nil {
+			return err
+		}
+		if relDest == "." {
+			relDest = "/"
+		}
+		if relDest[0] != '/' {
+			relDest = "/" + relDest
+		}
+
+		fmt.Fprintf(os.Stderr, "root: %s dest: %s relDest: %s\n", root, dest, relDest)
+		// dest = relDest
+	}
+
 	// This is normally how Windows would unpack the archive, but since
 	// we need reduced resources we will unpack the archive in the daemon process
-	return archive.Unpack(decompressedArchive, longpath.AddPrefix(dest), options)
+	return archive.Unpack(decompressedArchive, dest, options)
 }
 
 func tar() {
