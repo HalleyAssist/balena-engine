@@ -1052,7 +1052,6 @@ loop:
 // Untar reads a stream of bytes from `archive`, parses it as a tar archive,
 // and unpacks it into the directory at `dest`.
 // The archive may be compressed with one of the following algorithms:
-//  identity (uncompressed), gzip, bzip2, xz.
 // FIXME: specify behavior when target path exists vs. doesn't exist.
 func Untar(tarArchive io.Reader, dest string, options *TarOptions) error {
 	return untarHandler(tarArchive, dest, options, true)
@@ -1088,7 +1087,9 @@ func untarHandler(tarArchive io.Reader, dest string, options *TarOptions, decomp
 		r = decompressedArchive
 	}
 
-	return Unpack(r, dest, options)
+	e := Unpack(r, dest, options)
+	runtime.GC()
+	return e
 }
 
 // TarUntar is a convenience function which calls Tar and Untar, with the output of one piped into the other.
