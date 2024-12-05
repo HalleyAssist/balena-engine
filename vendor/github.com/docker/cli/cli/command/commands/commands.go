@@ -24,10 +24,6 @@ func AddCommands(cmd *cobra.Command, dockerCli command.Cli) {
 
 		// image
 		image.NewImageCommand(dockerCli),
-		image.NewBuildCommand(dockerCli),
-
-		// builder
-		builder.NewBuilderCommand(dockerCli),
 
 		// manifest
 		manifest.NewManifestCommand(dockerCli),
