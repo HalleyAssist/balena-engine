@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/docker/cli/cli/command"
-	"github.com/docker/cli/cli/command/builder"
 	"github.com/docker/cli/cli/command/container"
 	"github.com/docker/cli/cli/command/image"
 	"github.com/docker/cli/cli/command/manifest"

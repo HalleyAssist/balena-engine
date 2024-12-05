@@ -8,7 +8,6 @@ import (
 
 	"github.com/docker/cli/cli"
 	"github.com/docker/cli/cli/command"
-	"github.com/docker/cli/cli/command/builder"
 	"github.com/docker/cli/cli/command/container"
 	"github.com/docker/cli/cli/command/image"
 	"github.com/docker/cli/cli/command/network"
@@ -82,9 +81,6 @@ func runPrune(dockerCli command.Cli, options pruneOptions) error {
 		pruneFuncs = append(pruneFuncs, volume.RunPrune)
 	}
 	pruneFuncs = append(pruneFuncs, image.RunPrune)
-	if options.pruneBuildCache {
-		pruneFuncs = append(pruneFuncs, builder.CachePrune)
-	}
 
 	var spaceReclaimed uint64
 	for _, pruneFn := range pruneFuncs {
