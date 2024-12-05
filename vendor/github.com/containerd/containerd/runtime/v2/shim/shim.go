@@ -147,17 +147,13 @@ func parseFlags() {
 }
 
 func setRuntime() {
-	debug.SetGCPercent(40)
+	debug.SetGCPercent(5)
 	go func() {
 		for range time.Tick(30 * time.Second) {
 			debug.FreeOSMemory()
 		}
 	}()
-	if os.Getenv("GOMAXPROCS") == "" {
-		// If GOMAXPROCS hasn't been set, we default to a value of 1 to reduce
-		// the number of Go stacks present in the shim.
-		runtime.GOMAXPROCS(1)
-	}
+	runtime.GOMAXPROCS(1)
 }
 
 func setLogger(ctx context.Context, id string) (context.Context, error) {
