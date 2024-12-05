@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/docker/cli/cli/command"
-	"github.com/docker/cli/cli/command/builder"
 	"github.com/docker/cli/cli/command/container"
 	"github.com/docker/cli/cli/command/image"
 	"github.com/docker/cli/cli/command/manifest"
@@ -24,10 +23,6 @@ func AddCommands(cmd *cobra.Command, dockerCli command.Cli) {
 
 		// image
 		image.NewImageCommand(dockerCli),
-		image.NewBuildCommand(dockerCli),
-
-		// builder
-		builder.NewBuilderCommand(dockerCli),
 
 		// manifest
 		manifest.NewManifestCommand(dockerCli),
@@ -50,16 +45,14 @@ func AddCommands(cmd *cobra.Command, dockerCli command.Cli) {
 		// legacy commands may be hidden
 		hide(system.NewInspectCommand(dockerCli)),
 		hide(container.NewAttachCommand(dockerCli)),
+		hide(container.NewExecCommand(dockerCli)),
 		hide(container.NewKillCommand(dockerCli)),
 		hide(container.NewLogsCommand(dockerCli)),
-		hide(container.NewPauseCommand(dockerCli)),
-		hide(container.NewPortCommand(dockerCli)),
 		hide(container.NewPsCommand(dockerCli)),
 		hide(container.NewRestartCommand(dockerCli)),
 		hide(container.NewRmCommand(dockerCli)),
 		hide(container.NewStartCommand(dockerCli)),
 		hide(container.NewStopCommand(dockerCli)),
-		hide(container.NewUnpauseCommand(dockerCli)),
 		hide(container.NewWaitCommand(dockerCli)),
 		hide(image.NewImagesCommand(dockerCli)),
 		hide(image.NewPullCommand(dockerCli)),

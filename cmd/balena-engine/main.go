@@ -10,7 +10,6 @@ import (
 	"github.com/docker/cli/cmd/docker"
 	"github.com/docker/docker/cmd/dockerd"
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/docker/libnetwork/cmd/proxy"
 	"github.com/opencontainers/runc"
 
 	"os"
