@@ -3,11 +3,12 @@ package ioutils
 import (
 	"io"
 	"os"
+	"time"
 
 	"golang.org/x/sys/unix"
 )
 
-const STEP = 2 * 1024 * 1024 // 2MB
+const STEP = 1024 * 1024 // 1MB
 
 const (
 	SYNC_FILE_RANGE_WAIT_BEFORE = 1
@@ -39,6 +40,7 @@ func (e *eagerFileWriter) Write(b []byte) (int, error) {
 	n, err := e.f.Write(b)
 	e.written += int64(n)
 	if e.written-e.synced > STEP {
+		time.Sleep(100 * time.Millisecond)
 		unix.SyncFileRange(int(e.f.Fd()), e.synced, STEP, SYNC_FILE_RANGE_WRITE)
 		e.synced += STEP
 	}

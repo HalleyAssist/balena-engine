@@ -9,14 +9,16 @@ import (
 
 // Reader is a Reader with progress bar.
 type Reader struct {
-	in          io.ReadCloser // Stream to read from
-	out         Output        // Where to send progress bar to
-	size        int64
-	current     int64
-	lastUpdate  int64
-	id          string
-	action      string
-	rateLimiter *rate.Limiter
+	in           io.ReadCloser // Stream to read from
+	out          Output        // Where to send progress bar to
+	size         int64
+	current      int64
+	lastUpdate   int64
+	lastDelay    int64
+	id           string
+	action       string
+	rateLimiter  *rate.Limiter
+	delayLimiter *rate.Limiter
 }
 
 // NewProgressReader creates a new ProgressReader.
@@ -44,6 +46,12 @@ func (p *Reader) Read(buf []byte) (n int, err error) {
 	if p.current-p.lastUpdate > updateEvery || err != nil {
 		p.updateProgress(err != nil && read == 0)
 		p.lastUpdate = p.current
+	}
+
+	// every 1MB wait 200ms
+	if p.current-p.lastDelay > int64(1024*512) {
+		p.lastDelay = p.current
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	return read, err
