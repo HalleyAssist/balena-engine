@@ -39,9 +39,9 @@ type eagerFileWriter struct {
 func (e *eagerFileWriter) Write(b []byte) (int, error) {
 	n, err := e.f.Write(b)
 	e.written += int64(n)
-	if e.written-e.synced > STEP {
-		time.Sleep(100 * time.Millisecond)
+	if e.written-e.synced >= STEP {
 		unix.SyncFileRange(int(e.f.Fd()), e.synced, STEP, SYNC_FILE_RANGE_WRITE)
+		time.Sleep(100 * time.Millisecond)
 		e.synced += STEP
 	}
 	return n, err
