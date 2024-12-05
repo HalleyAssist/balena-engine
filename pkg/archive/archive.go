@@ -18,7 +18,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brk0v/directio"
 	"github.com/docker/docker/pkg/fileutils"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/ioutils"
@@ -605,19 +604,15 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 		// Source is regular file. We use system.OpenFileSequential to use sequential
 		// file access to avoid depleting the standby list on Windows.
 		// On Linux, this equates to a regular os.OpenFile
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|syscall.O_DIRECT, hdrInfo.Mode())
+		file, err := system.OpenFileSequential(path, os.O_CREATE|os.O_WRONLY, hdrInfo.Mode())
 		if err != nil {
-			file.Close()
 			return err
 		}
 
-		syscall.Fallocate(int(file.Fd()), 0, 0, hdr.Size)
-
-		dio, err := directio.New(file)
-
-		efw := ioutils.NewEagerDioWriter(dio)
+		efw := ioutils.NewEagerFileWriter(file)
 
 		if _, err := io.Copy(efw, reader); err != nil {
+			file.Close()
 			return err
 		}
 
