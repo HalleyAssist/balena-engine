@@ -43,9 +43,6 @@ func main() {
 	case "balena-runc", "balena-engine-runc":
 		runtime.GOMAXPROCS(1)
 		runc.Main()
-	case "balena-proxy", "balena-engine-proxy":
-		runtime.GOMAXPROCS(1)
-		proxy.Main()
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown command: %v\n", command)
 		os.Exit(1)
