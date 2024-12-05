@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/brk0v/directio"
 	"golang.org/x/sys/unix"
 )
 
@@ -54,4 +55,29 @@ func (e *eagerFileWriter) Close() error {
 
 func NewEagerFileWriter(f *os.File) io.WriteCloser {
 	return &eagerFileWriter{f: f}
+}
+
+type eagerDioWriter struct {
+	d       *directio.DirectIO
+	written int64
+	synced  int64
+}
+
+func (e *eagerDioWriter) Write(b []byte) (int, error) {
+	n, err := e.d.Write(b)
+	e.written += int64(n)
+	if e.written-e.synced > STEP {
+		time.Sleep(100 * time.Millisecond)
+		e.synced += STEP
+	}
+	return n, err
+}
+
+func (e *eagerDioWriter) Close() error {
+	e.d.Flush()
+	return e.d.Close()
+}
+
+func NewEagerDioWriter(d *directio.DirectIO) io.WriteCloser {
+	return &eagerDioWriter{d: d}
 }
