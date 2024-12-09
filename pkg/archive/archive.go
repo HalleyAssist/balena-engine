@@ -666,10 +666,15 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 	}
 
 	// Lchown is not supported on Windows.
-	if Lchown && runtime.GOOS != "windows" {
-		if chownOpts == nil {
-			chownOpts = &idtools.Identity{UID: hdr.Uid, GID: hdr.Gid}
+	if chownOpts == nil {
+		if hdr.Uid != 0 && hdr.Gid != 0 {
+			// we are already root
+			if err := os.Lchown(path, hdr.Uid, hdr.Gid); err != nil {
+				return err
+			}
 		}
+	} else if chownOpts.UID != 0 && chownOpts.GID != 0 {
+		// we are already root
 		if err := os.Lchown(path, chownOpts.UID, chownOpts.GID); err != nil {
 			return err
 		}

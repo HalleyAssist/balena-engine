@@ -24,9 +24,6 @@ func UnpackLayer(dest string, layer io.Reader, options *TarOptions) (size int64,
 	trBuf := pools.BufioReader32KPool.Get(tr)
 	defer pools.BufioReader32KPool.Put(trBuf)
 
-	var dirs []*tar.Header
-	unpackedPaths := make(map[string]struct{})
-
 	if options == nil {
 		options = &TarOptions{}
 	}
@@ -127,38 +124,7 @@ func UnpackLayer(dest string, layer io.Reader, options *TarOptions) (size int64,
 		base := filepath.Base(path)
 
 		if strings.HasPrefix(base, WhiteoutPrefix) {
-			dir := filepath.Dir(path)
-			if base == WhiteoutOpaqueDir {
-				_, err := os.Lstat(dir)
-				if err != nil {
-					return 0, err
-				}
-				err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-					if err != nil {
-						if os.IsNotExist(err) {
-							err = nil // parent was deleted
-						}
-						return err
-					}
-					if path == dir {
-						return nil
-					}
-					if _, exists := unpackedPaths[path]; !exists {
-						err := os.RemoveAll(path)
-						return err
-					}
-					return nil
-				})
-				if err != nil {
-					return 0, err
-				}
-			} else {
-				originalBase := base[len(WhiteoutPrefix):]
-				originalPath := filepath.Join(dir, originalBase)
-				if err := os.RemoveAll(originalPath); err != nil {
-					return 0, err
-				}
-			}
+			logrus.Warnf("Ignoring unsupported whiteout %s", path)
 		} else {
 			// If path exits we almost always just want to remove and replace it.
 			// The only exception is when it is a directory *and* the file from
@@ -199,20 +165,6 @@ func UnpackLayer(dest string, layer io.Reader, options *TarOptions) (size int64,
 			if err := createTarFile(path, dest, srcHdr, srcData, !options.NoLchown, nil, options.InUserNS); err != nil {
 				return 0, err
 			}
-
-			// Directory mtimes must be handled at the end to avoid further
-			// file creation in them to modify the directory mtime
-			if hdr.Typeflag == tar.TypeDir {
-				dirs = append(dirs, hdr)
-			}
-			unpackedPaths[path] = struct{}{}
-		}
-	}
-
-	for _, hdr := range dirs {
-		path := filepath.Join(dest, hdr.Name)
-		if err := system.Chtimes(path, hdr.AccessTime, hdr.ModTime); err != nil {
-			return 0, err
 		}
 	}
 
