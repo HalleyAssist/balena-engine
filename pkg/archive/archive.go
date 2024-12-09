@@ -710,6 +710,8 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 		}
 	}
 
+	time.Sleep(1 * time.Millisecond)
+
 	return nil
 }
 
