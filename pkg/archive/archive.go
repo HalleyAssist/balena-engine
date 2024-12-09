@@ -924,7 +924,6 @@ func Unpack(decompressedArchive io.Reader, dest string, options *TarOptions) err
 	trBuf := pools.BufioReader32KPool.Get(nil)
 	defer pools.BufioReader32KPool.Put(trBuf)
 
-	var dirs []*tar.Header
 	idMapping := idtools.NewIDMappingsFromMaps(options.UIDMaps, options.GIDMaps)
 	rootIDs := idMapping.RootPair()
 	whiteoutConverter, err := getWhiteoutConverter(options.WhiteoutFormat, options.InUserNS)
@@ -1031,21 +1030,8 @@ loop:
 		if err := createTarFile(path, dest, hdr, trBuf, !options.NoLchown, options.ChownOpts, options.InUserNS); err != nil {
 			return err
 		}
-
-		// Directory mtimes must be handled at the end to avoid further
-		// file creation in them to modify the directory mtime
-		if hdr.Typeflag == tar.TypeDir {
-			dirs = append(dirs, hdr)
-		}
 	}
 
-	for _, hdr := range dirs {
-		path := filepath.Join(dest, hdr.Name)
-
-		if err := system.Chtimes(path, hdr.AccessTime, hdr.ModTime); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
