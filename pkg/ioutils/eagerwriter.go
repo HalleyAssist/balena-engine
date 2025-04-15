@@ -41,7 +41,7 @@ func (e *eagerFileWriter) Write(b []byte) (int, error) {
 	e.written += int64(n)
 	if e.written-e.synced >= STEP {
 		unix.SyncFileRange(int(e.f.Fd()), e.synced, STEP, SYNC_FILE_RANGE_WRITE)
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		e.synced += STEP
 	}
 	return n, err
