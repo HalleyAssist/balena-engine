@@ -15,7 +15,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/docker/docker/pkg/fileutils"
@@ -594,8 +593,15 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 	case tar.TypeDir:
 		// Create directory unless it exists as a directory already.
 		// In that case we just want to merge the two
-		if fi, err := os.Lstat(path); !(err == nil && fi.IsDir()) {
-			if err := os.Mkdir(path, hdrInfo.Mode()); err != nil {
+		if err := os.Mkdir(path, hdrInfo.Mode()); err != nil {
+			// if the directory already exists, ignore the error
+			if !os.IsExist(err) {
+				return err
+			}
+
+			// There is no LChmod, so ignore mode for symlink. Also, this
+			// must happen after chown, as that can modify the file mode
+			if err := handleLChmod(hdr, path, hdrInfo); err != nil {
 				return err
 			}
 		}
@@ -604,10 +610,28 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 		// Source is regular file. We use system.OpenFileSequential to use sequential
 		// file access to avoid depleting the standby list on Windows.
 		// On Linux, this equates to a regular os.OpenFile
-		file, err := system.OpenFileSequential(path, os.O_CREATE|os.O_WRONLY, hdrInfo.Mode())
+		mode := hdrInfo.Mode()
+		file, err := system.OpenFileSequential(path, os.O_CREATE|os.O_WRONLY|os.O_EXCL, mode)
 		if err != nil {
-			return err
+			// existing file needs mode set (but this is abnormal)
+			if !os.IsExist(err) {
+				return err
+			}
+
+			file, err = system.OpenFileSequential(path, os.O_WRONLY, mode)
+			if err != nil {
+				return err
+			}
+			if err := handleLChmod(hdr, path, hdrInfo); err != nil {
+				return err
+			}
 		}
+
+		// hint at size
+		//if err := file.Truncate(hdr.Size); err != nil {
+		//	file.Close()
+		//	return err
+		//}
 
 		efw := ioutils.NewEagerFileWriter(file)
 
@@ -666,24 +690,19 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 	}
 
 	// Lchown is not supported on Windows.
-	if chownOpts == nil {
-		if hdr.Uid != 0 && hdr.Gid != 0 {
-			// we are already root
-			if err := os.Lchown(path, hdr.Uid, hdr.Gid); err != nil {
-				return err
-			}
-		}
-	} else if chownOpts.UID != 0 && chownOpts.GID != 0 {
-		// we are already root
-		if err := os.Lchown(path, chownOpts.UID, chownOpts.GID); err != nil {
+	if hdr.Uid != 0 && hdr.Gid != 0 { // we are already root
+		// ignore chownOpts
+		if err := os.Lchown(path, hdr.Uid, hdr.Gid); err != nil {
 			return err
 		}
 	}
 
-	// There is no LChmod, so ignore mode for symlink. Also, this
-	// must happen after chown, as that can modify the file mode
-	if err := handleLChmod(hdr, path, hdrInfo); err != nil {
-		return err
+	if hdr.Typeflag == tar.TypeSymlink || hdr.Typeflag == tar.TypeBlock || hdr.Typeflag == tar.TypeChar || hdr.Typeflag == tar.TypeLink {
+		// There is no LChmod, so ignore mode for symlink. Also, this
+		// must happen after chown, as that can modify the file mode
+		if err := handleLChmod(hdr, path, hdrInfo); err != nil {
+			return err
+		}
 	}
 
 	aTime := hdr.AccessTime
@@ -693,21 +712,8 @@ func createTarFile(path, extractDir string, hdr *tar.Header, reader io.Reader, L
 	}
 
 	// system.Chtimes doesn't support a NOFOLLOW flag atm
-	if hdr.Typeflag == tar.TypeLink {
-		if fi, err := os.Lstat(hdr.Linkname); err == nil && (fi.Mode()&os.ModeSymlink == 0) {
-			if err := system.Chtimes(path, aTime, hdr.ModTime); err != nil {
-				return err
-			}
-		}
-	} else if hdr.Typeflag != tar.TypeSymlink {
-		if err := system.Chtimes(path, aTime, hdr.ModTime); err != nil {
-			return err
-		}
-	} else {
-		ts := []syscall.Timespec{timeToTimespec(aTime), timeToTimespec(hdr.ModTime)}
-		if err := system.LUtimesNano(path, ts); err != nil && err != system.ErrNotSupportedPlatform {
-			return err
-		}
+	if err := handleLUtimes(path, aTime, hdr.ModTime); err != nil {
+		return err
 	}
 
 	time.Sleep(1 * time.Millisecond)

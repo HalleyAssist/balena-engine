@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/containerd/containerd/sys"
 	"github.com/docker/docker/pkg/idtools"
@@ -112,5 +113,13 @@ func handleLChmod(hdr *tar.Header, path string, hdrInfo os.FileInfo) error {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func handleLUtimes(name string, atime, mtime time.Time) error {
+	at := unix.NsecToTimespec(atime.UnixNano())
+	mt := unix.NsecToTimespec(mtime.UnixNano())
+	utimes := [2]unix.Timespec{at, mt}
+	return unix.UtimesNanoAt(unix.AT_FDCWD, name, utimes[0:], unix.AT_SYMLINK_NOFOLLOW)
 }

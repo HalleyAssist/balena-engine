@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/longpath"
@@ -58,6 +59,10 @@ func handleTarTypeBlockCharFifo(hdr *tar.Header, path string) error {
 }
 
 func handleLChmod(hdr *tar.Header, path string, hdrInfo os.FileInfo) error {
+	return nil
+}
+
+func handleLUtimes(name string, atime, mtime time.Time) error {
 	return nil
 }
 
