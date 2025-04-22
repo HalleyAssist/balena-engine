@@ -578,6 +578,10 @@ func (ta *tarAppender) addTarFile(path, name string) error {
 		if err != nil {
 			return err
 		}
+
+		if hdr.Size >= 256*1024 {
+			time.Sleep(1 * time.Millisecond)
+		}
 	}
 
 	return nil
