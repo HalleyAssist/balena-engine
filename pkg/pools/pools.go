@@ -17,12 +17,11 @@ import (
 	"github.com/docker/docker/pkg/ioutils"
 )
 
-const buffer32K = 32 * 1024
+const buffer32K = 128 * 1024 // 128k Buffer actually
 
 var (
 	// BufioReader32KPool is a pool which returns bufio.Reader with a 32K buffer.
 	BufioReader32KPool = newBufioReaderPoolWithSize(buffer32K)
-	// BufioWriter32KPool is a pool which returns bufio.Writer with a 32K buffer.
 	BufioWriter32KPool = newBufioWriterPoolWithSize(buffer32K)
 	buffer32KPool      = newBufferPoolWithSize(buffer32K)
 )
