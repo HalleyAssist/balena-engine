@@ -306,7 +306,7 @@ func (daemon *Daemon) ContainerExecStart(ctx context.Context, name string, stdin
 // execCommandGC runs a ticker to clean up the daemon references
 // of exec configs that are no longer part of the container.
 func (daemon *Daemon) execCommandGC() {
-	for range time.Tick(5 * time.Minute) {
+	for range time.Tick(30 * time.Second) {
 		var (
 			cleaned          int
 			liveExecCommands = daemon.containerExecIds()
