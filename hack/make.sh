@@ -148,6 +148,7 @@ main() {
 	# remove the old link tool and replace it with a patched one
 	# that doesnt store function names in the binary
 	# this greatly reduces the size of the binary (https://github.com/xaionaro/documentation/blob/master/golang/reduce-binary-size.md)
+	set -e
 	TOOL_LINK="$(readlink -f "$(go env GOROOT)"/pkg/tool/*/link)"
 	pushd "$(go env GOROOT)"/src/cmd/link
 	sed -re 's/(start := len\(ftab.P\))/\1; return int32(start)+1/' \
@@ -156,6 +157,7 @@ main() {
 	mv "$TOOL_LINK" "$TOOL_LINK".orig
 	mv link "$TOOL_LINK"
 	popd
+	set +e
 
 
 	bundle_dir="bundles"
