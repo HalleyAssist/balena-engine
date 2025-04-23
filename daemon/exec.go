@@ -161,6 +161,12 @@ func (daemon *Daemon) ContainerExecStart(ctx context.Context, name string, stdin
 		return errExecNotFound(name)
 	}
 
+	liveExecCommands := daemon.containerExecIds()
+	if len(liveExecCommands) >= 3 {
+		err := fmt.Errorf("Error: Too many exec commands running (%d)", len(liveExecCommands))
+		return errdefs.Conflict(err)
+	}
+
 	ec.Lock()
 	if ec.ExitCode != nil {
 		ec.Unlock()
