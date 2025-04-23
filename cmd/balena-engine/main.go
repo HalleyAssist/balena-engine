@@ -34,6 +34,7 @@ func main() {
 	switch command {
 	case "balena", "balena-engine":
 		runtime.GOMAXPROCS(1)
+		debug.SetGCPercent(10)
 		docker.Main()
 	case "balenad", "balena-engine-daemon":
 		runtime.GOMAXPROCS(2)
