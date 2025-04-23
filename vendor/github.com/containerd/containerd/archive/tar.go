@@ -155,7 +155,7 @@ func applyNaive(ctx context.Context, root string, r io.Reader, options ApplyOpti
 
 		convertWhiteout = options.ConvertWhiteout
 
-		buf = new([]byte, 128*1024)
+		buf = make([]byte, 128*1024)
 	)
 
 	if convertWhiteout == nil {
@@ -297,7 +297,7 @@ func applyNaive(ctx context.Context, root string, r io.Reader, options ApplyOpti
 	return size, nil
 }
 
-func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header, reader io.Reader, buf byte[]) error {
+func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header, reader io.Reader, buf []byte) error {
 	// hdr.Mode is in linux format, which we can use for syscalls,
 	// but for os.Foo() calls we need the mode converted to os.FileMode,
 	// so use hdrInfo.Mode() (they differ for e.g. setuid bits)
@@ -319,7 +319,7 @@ func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header
 			return err
 		}
 
-		_, err = copyBufferedB(ctx, file, reader)
+		_, err = copyBufferedB(ctx, file, reader, buf)
 		if err1 := file.Close(); err == nil {
 			err = err1
 		}
@@ -430,7 +430,7 @@ func mkparent(ctx context.Context, path, root string, parents []string) error {
 			if err := copyDirInfo(dir, path); err != nil {
 				return err
 			}
-			return copyUpXAttrs(path, ppath)
+			return nil
 		} else if !os.IsNotExist(err) {
 			return err
 		}
@@ -663,6 +663,8 @@ func (cw *ChangeWriter) includeParents(hdr *tar.Header) error {
 }
 
 func copyBufferedB(ctx context.Context, dst io.Writer, src io.Reader, buf []byte) (written int64, err error) {
+	sync := 0
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -676,6 +678,10 @@ func copyBufferedB(ctx context.Context, dst io.Writer, src io.Reader, buf []byte
 			nw, ew := dst.Write((buf)[0:nr])
 			if nw > 0 {
 				written += int64(nw)
+				sync += nw
+				if sync > 1024*1024 {
+					time.Sleep(10 * time.Millisecond)
+				}
 			}
 			if ew != nil {
 				err = ew
