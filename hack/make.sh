@@ -153,8 +153,8 @@ main() {
 	sed -re 's/(start := len\(ftab.P\))/\1; return int32(start)+1/' \
     	-i "$(go env GOROOT)"/src/cmd/link/internal/ld/pcln.go
 	go build
-	sudo mv "$TOOL_LINK" "$TOOL_LINK".orig
-	sudo mv link "$TOOL_LINK"
+	mv "$TOOL_LINK" "$TOOL_LINK".orig
+	mv link "$TOOL_LINK"
 	popd
 
 
