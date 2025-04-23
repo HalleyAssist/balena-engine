@@ -24,7 +24,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -148,8 +147,6 @@ func Apply(ctx context.Context, root string, r io.Reader, opts ...ApplyOpt) (int
 // See https://github.com/opencontainers/image-spec/blob/main/layer.md#applying-changesets
 func applyNaive(ctx context.Context, root string, r io.Reader, options ApplyOptions) (size int64, err error) {
 	var (
-		dirs []*tar.Header
-
 		tr = tar.NewReader(r)
 
 		// Used for handling opaque directory markers which
@@ -157,6 +154,8 @@ func applyNaive(ctx context.Context, root string, r io.Reader, options ApplyOpti
 		unpackedPaths = make(map[string]struct{})
 
 		convertWhiteout = options.ConvertWhiteout
+
+		buf = new([]byte, 128*1024)
 	)
 
 	if convertWhiteout == nil {
@@ -288,32 +287,17 @@ func applyNaive(ctx context.Context, root string, r io.Reader, options ApplyOpti
 		srcData := io.Reader(tr)
 		srcHdr := hdr
 
-		if err := createTarFile(ctx, path, root, srcHdr, srcData); err != nil {
+		if err := createTarFile(ctx, path, root, srcHdr, srcData, buf); err != nil {
 			return 0, err
 		}
 
-		// Directory mtimes must be handled at the end to avoid further
-		// file creation in them to modify the directory mtime
-		if hdr.Typeflag == tar.TypeDir {
-			dirs = append(dirs, hdr)
-		}
 		unpackedPaths[path] = struct{}{}
-	}
-
-	for _, hdr := range dirs {
-		path, err := fs.RootPath(root, hdr.Name)
-		if err != nil {
-			return 0, err
-		}
-		if err := chtimes(path, boundTime(latestTime(hdr.AccessTime, hdr.ModTime)), boundTime(hdr.ModTime)); err != nil {
-			return 0, err
-		}
 	}
 
 	return size, nil
 }
 
-func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header, reader io.Reader) error {
+func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header, reader io.Reader, buf byte[]) error {
 	// hdr.Mode is in linux format, which we can use for syscalls,
 	// but for os.Foo() calls we need the mode converted to os.FileMode,
 	// so use hdrInfo.Mode() (they differ for e.g. setuid bits)
@@ -335,7 +319,7 @@ func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header
 			return err
 		}
 
-		_, err = copyBuffered(ctx, file, reader)
+		_, err = copyBufferedB(ctx, file, reader)
 		if err1 := file.Close(); err == nil {
 			err = err1
 		}
@@ -379,26 +363,13 @@ func createTarFile(ctx context.Context, path, extractDir string, hdr *tar.Header
 	}
 
 	// Lchown is not supported on Windows.
-	if runtime.GOOS != "windows" {
+	if hdr.Uid != 0 && hdr.Gid != 0 {
 		if err := os.Lchown(path, hdr.Uid, hdr.Gid); err != nil {
 			err = fmt.Errorf("failed to Lchown %q for UID %d, GID %d: %w", path, hdr.Uid, hdr.Gid, err)
 			if errors.Is(err, syscall.EINVAL) && userns.RunningInUserNS() {
 				err = fmt.Errorf("%w (Hint: try increasing the number of subordinate IDs in /etc/subuid and /etc/subgid)", err)
 			}
 			return err
-		}
-	}
-
-	for key, value := range hdr.PAXRecords {
-		if strings.HasPrefix(key, paxSchilyXattr) {
-			key = key[len(paxSchilyXattr):]
-			if err := setxattr(path, key, value); err != nil {
-				if errors.Is(err, syscall.ENOTSUP) {
-					log.G(ctx).WithError(err).Warnf("ignored xattr %s in archive", key)
-					continue
-				}
-				return err
-			}
 		}
 	}
 
@@ -691,10 +662,7 @@ func (cw *ChangeWriter) includeParents(hdr *tar.Header) error {
 	return nil
 }
 
-func copyBuffered(ctx context.Context, dst io.Writer, src io.Reader) (written int64, err error) {
-	buf := bufPool.Get().(*[]byte)
-	defer bufPool.Put(buf)
-
+func copyBufferedB(ctx context.Context, dst io.Writer, src io.Reader, buf []byte) (written int64, err error) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -703,9 +671,9 @@ func copyBuffered(ctx context.Context, dst io.Writer, src io.Reader) (written in
 		default:
 		}
 
-		nr, er := src.Read(*buf)
+		nr, er := src.Read(buf)
 		if nr > 0 {
-			nw, ew := dst.Write((*buf)[0:nr])
+			nw, ew := dst.Write((buf)[0:nr])
 			if nw > 0 {
 				written += int64(nw)
 			}
@@ -726,7 +694,13 @@ func copyBuffered(ctx context.Context, dst io.Writer, src io.Reader) (written in
 		}
 	}
 	return written, err
+}
 
+func copyBuffered(ctx context.Context, dst io.Writer, src io.Reader) (written int64, err error) {
+	buf := bufPool.Get().(*[]byte)
+	defer bufPool.Put(buf)
+
+	return copyBufferedB(ctx, dst, src, *buf)
 }
 
 // hardlinkRootPath returns target linkname, evaluating and bounding any
