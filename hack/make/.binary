@@ -84,6 +84,7 @@ hash_files() {
 	go build \
 		-o "$DEST/$BINARY_FULLNAME" \
 		"${BUILDFLAGS[@]}" \
+		-trimpath 
 		-ldflags "
 		$LDFLAGS
 		$LDFLAGS_STATIC_DOCKER
