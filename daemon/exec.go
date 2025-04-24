@@ -163,8 +163,11 @@ func (daemon *Daemon) ContainerExecStart(ctx context.Context, name string, stdin
 
 	liveExecCommands := daemon.containerExecIds()
 	if len(liveExecCommands) >= 3 {
-		err := fmt.Errorf("Error: Too many exec commands running (%d)", len(liveExecCommands))
-		return errdefs.Conflict(err)
+		daemon._execCommandGC()
+		if len(liveExecCommands) >= 3 {
+			err := fmt.Errorf("Error: Too many exec commands running (%d)", len(liveExecCommands))
+			return errdefs.Conflict(err)
+		}
 	}
 
 	ec.Lock()
@@ -309,27 +312,27 @@ func (daemon *Daemon) ContainerExecStart(ctx context.Context, name string, stdin
 	return nil
 }
 
+func (daemon *Daemon) _execCommandGC() {
+	var (
+		cleaned          int
+		liveExecCommands = daemon.containerExecIds()
+	)
+	for id, config := range daemon.execCommands.Commands() {
+		if _, exists := liveExecCommands[id]; !exists {
+			cleaned++
+			daemon.execCommands.Delete(id, config.Pid)
+		}
+	}
+	if cleaned > 0 {
+		logrus.Debugf("clean %d unused exec commands", cleaned)
+	}
+}
+
 // execCommandGC runs a ticker to clean up the daemon references
 // of exec configs that are no longer part of the container.
 func (daemon *Daemon) execCommandGC() {
-	for range time.Tick(30 * time.Second) {
-		var (
-			cleaned          int
-			liveExecCommands = daemon.containerExecIds()
-		)
-		for id, config := range daemon.execCommands.Commands() {
-			if config.CanRemove {
-				cleaned++
-				daemon.execCommands.Delete(id, config.Pid)
-			} else {
-				if _, exists := liveExecCommands[id]; !exists {
-					config.CanRemove = true
-				}
-			}
-		}
-		if cleaned > 0 {
-			logrus.Debugf("clean %d unused exec commands", cleaned)
-		}
+	for range time.Tick(15 * time.Second) {
+		daemon._execCommandGC()
 	}
 }
 
