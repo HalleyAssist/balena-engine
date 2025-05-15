@@ -82,6 +82,7 @@ hash_files() {
 	echo "Building: $DEST/$BINARY_FULLNAME"
 	echo "GOOS=\"${GOOS}\" GOARCH=\"${GOARCH}\" GOARM=\"${GOARM}\""
 	go build \
+	    -compiler=gccgo \
 		-o "$DEST/$BINARY_FULLNAME" \
 		"${BUILDFLAGS[@]}" \
 		-ldflags "
