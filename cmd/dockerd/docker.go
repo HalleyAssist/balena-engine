@@ -10,7 +10,6 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/docker/docker/rootless"
-	"github.com/moby/buildkit/util/apicaps"
 	"github.com/moby/term"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -55,9 +54,6 @@ func newDaemonCommand() (*cobra.Command, error) {
 }
 
 func init() {
-	if dockerversion.ProductName != "" {
-		apicaps.ExportedProduct = dockerversion.ProductName
-	}
 	// When running with RootlessKit, $XDG_RUNTIME_DIR, $XDG_DATA_HOME, and $XDG_CONFIG_HOME needs to be
 	// honored as the default dirs, because we are unlikely to have permissions to access the system-wide
 	// directories.

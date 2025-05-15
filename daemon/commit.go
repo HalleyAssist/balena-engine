@@ -1,16 +1,9 @@
 package daemon // import "github.com/docker/docker/daemon"
 
 import (
-	"fmt"
-	"runtime"
 	"strings"
-	"time"
 
-	"github.com/docker/docker/api/types/backend"
 	containertypes "github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/builder/dockerfile"
-	"github.com/docker/docker/errdefs"
-	"github.com/pkg/errors"
 )
 
 // merge merges two Config, the image container configuration (defaults values),
@@ -111,75 +104,4 @@ func merge(userConf, imageConf *containertypes.Config) error {
 		userConf.StopSignal = imageConf.StopSignal
 	}
 	return nil
-}
-
-// CreateImageFromContainer creates a new image from a container. The container
-// config will be updated by applying the change set to the custom config, then
-// applying that config over the existing container config.
-func (daemon *Daemon) CreateImageFromContainer(name string, c *backend.CreateImageConfig) (string, error) {
-	start := time.Now()
-	container, err := daemon.GetContainer(name)
-	if err != nil {
-		return "", err
-	}
-
-	// It is not possible to commit a running container on Windows
-	if isWindows && container.IsRunning() {
-		return "", errors.Errorf("%+v does not support commit of a running container", runtime.GOOS)
-	}
-
-	if container.IsDead() {
-		err := fmt.Errorf("You cannot commit container %s which is Dead", container.ID)
-		return "", errdefs.Conflict(err)
-	}
-
-	if container.IsRemovalInProgress() {
-		err := fmt.Errorf("You cannot commit container %s which is being removed", container.ID)
-		return "", errdefs.Conflict(err)
-	}
-
-	if c.Pause && !container.IsPaused() {
-		daemon.containerPause(container)
-		defer daemon.containerUnpause(container)
-	}
-
-	if c.Config == nil {
-		c.Config = container.Config
-	}
-	newConfig, err := dockerfile.BuildFromConfig(c.Config, c.Changes, container.OS)
-	if err != nil {
-		return "", err
-	}
-	if err := merge(newConfig, container.Config); err != nil {
-		return "", err
-	}
-
-	id, err := daemon.imageService.CommitImage(backend.CommitConfig{
-		Author:              c.Author,
-		Comment:             c.Comment,
-		Config:              newConfig,
-		ContainerConfig:     container.Config,
-		ContainerID:         container.ID,
-		ContainerMountLabel: container.MountLabel,
-		ContainerOS:         container.OS,
-		ParentImageID:       string(container.ImageID),
-	})
-	if err != nil {
-		return "", err
-	}
-
-	var imageRef string
-	if c.Repo != "" {
-		imageRef, err = daemon.imageService.TagImage(string(id), c.Repo, c.Tag)
-		if err != nil {
-			return "", err
-		}
-	}
-	daemon.LogContainerEventWithAttributes(container, "commit", map[string]string{
-		"comment":  c.Comment,
-		"imageID":  id.String(),
-		"imageRef": imageRef,
-	})
-	containerActions.WithValues("commit").UpdateSince(start)
-	return id.String(), nil
 }

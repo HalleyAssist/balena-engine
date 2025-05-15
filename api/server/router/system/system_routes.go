@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/server/httputils"
-	"github.com/docker/docker/api/server/router/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
@@ -16,7 +15,6 @@ import (
 	timetypes "github.com/docker/docker/api/types/time"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/pkg/ioutils"
-	pkgerrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
@@ -30,10 +28,6 @@ func (s *systemRouter) pingHandler(ctx context.Context, w http.ResponseWriter, r
 	w.Header().Add("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Add("Pragma", "no-cache")
 
-	builderVersion := build.BuilderVersion(*s.features)
-	if bv := builderVersion; bv != "" {
-		w.Header().Set("Builder-Version", string(bv))
-	}
 	if r.Method == http.MethodHead {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Content-Length", "0")
@@ -99,27 +93,9 @@ func (s *systemRouter) getDiskUsage(ctx context.Context, w http.ResponseWriter, 
 		return err
 	})
 
-	var buildCache []*types.BuildCache
-	eg.Go(func() error {
-		var err error
-		buildCache, err = s.builder.DiskUsage(ctx)
-		if err != nil {
-			return pkgerrors.Wrap(err, "error getting build cache usage")
-		}
-		return nil
-	})
-
 	if err := eg.Wait(); err != nil {
 		return err
 	}
-
-	var builderSize int64
-	for _, b := range buildCache {
-		builderSize += b.Size
-	}
-
-	du.BuilderSize = builderSize
-	du.BuildCache = buildCache
 
 	return httputils.WriteJSON(w, http.StatusOK, du)
 }

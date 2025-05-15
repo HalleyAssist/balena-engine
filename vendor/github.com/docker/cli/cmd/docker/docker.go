@@ -346,8 +346,6 @@ func hideSubcommandIf(subcmd *cobra.Command, condition func(string) bool, annota
 
 func hideUnsupportedFeatures(cmd *cobra.Command, details versionDetails) error {
 	var (
-		buildKitDisabled = func(_ string) bool { v, _ := command.BuildKitEnabled(details.ServerInfo()); return !v }
-		buildKitEnabled  = func(_ string) bool { v, _ := command.BuildKitEnabled(details.ServerInfo()); return v }
 		notExperimental  = func(_ string) bool { return !details.ServerInfo().HasExperimental }
 		notOSType        = func(v string) bool { return v != details.ServerInfo().OSType }
 		versionOlderThan = func(v string) bool { return versions.LessThan(details.Client().ClientVersion(), v) }
@@ -365,16 +363,12 @@ func hideUnsupportedFeatures(cmd *cobra.Command, details versionDetails) error {
 			}
 		}
 
-		hideFlagIf(f, buildKitDisabled, "buildkit")
-		hideFlagIf(f, buildKitEnabled, "no-buildkit")
 		hideFlagIf(f, notExperimental, "experimental")
 		hideFlagIf(f, notOSType, "ostype")
 		hideFlagIf(f, versionOlderThan, "version")
 	})
 
 	for _, subcmd := range cmd.Commands() {
-		hideSubcommandIf(subcmd, buildKitDisabled, "buildkit")
-		hideSubcommandIf(subcmd, buildKitEnabled, "no-buildkit")
 		hideSubcommandIf(subcmd, notExperimental, "experimental")
 		hideSubcommandIf(subcmd, notOSType, "ostype")
 		hideSubcommandIf(subcmd, versionOlderThan, "version")

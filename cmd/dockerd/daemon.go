@@ -14,20 +14,14 @@ import (
 	containerddefaults "github.com/containerd/containerd/defaults"
 	"github.com/docker/docker/api"
 	apiserver "github.com/docker/docker/api/server"
-	buildbackend "github.com/docker/docker/api/server/backend/build"
 	"github.com/docker/docker/api/server/middleware"
 	"github.com/docker/docker/api/server/router"
-	"github.com/docker/docker/api/server/router/build"
 	"github.com/docker/docker/api/server/router/container"
 	distributionrouter "github.com/docker/docker/api/server/router/distribution"
-	grpcrouter "github.com/docker/docker/api/server/router/grpc"
 	"github.com/docker/docker/api/server/router/image"
 	"github.com/docker/docker/api/server/router/network"
-	sessionrouter "github.com/docker/docker/api/server/router/session"
 	systemrouter "github.com/docker/docker/api/server/router/system"
 	"github.com/docker/docker/api/server/router/volume"
-	buildkit "github.com/docker/docker/builder/builder-next"
-	"github.com/docker/docker/builder/dockerfile"
 	"github.com/docker/docker/cli/debug"
 	"github.com/docker/docker/daemon"
 	"github.com/docker/docker/daemon/config"
@@ -47,7 +41,6 @@ import (
 	"github.com/docker/docker/rootless"
 	"github.com/docker/docker/runconfig"
 	"github.com/docker/go-connections/tlsconfig"
-	"github.com/moby/buildkit/session"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
@@ -246,53 +239,15 @@ func (cli *DaemonCli) start(opts *daemonOptions) (err error) {
 }
 
 type routerOptions struct {
-	sessionManager *session.Manager
-	buildBackend   *buildbackend.Backend
-	features       *map[string]bool
-	buildkit       *buildkit.Builder
-	daemon         *daemon.Daemon
-	api            *apiserver.Server
+	features *map[string]bool
+	daemon   *daemon.Daemon
+	api      *apiserver.Server
 }
 
 func newRouterOptions(config *config.Config, d *daemon.Daemon) (routerOptions, error) {
-	opts := routerOptions{}
-	sm, err := session.NewManager()
-	if err != nil {
-		return opts, errors.Wrap(err, "failed to create sessionmanager")
-	}
-
-	manager, err := dockerfile.NewBuildManager(d.BuilderBackend(), d.IdentityMapping())
-	if err != nil {
-		return opts, err
-	}
-	cgroupParent := newCgroupParent(config)
-	bk, err := buildkit.New(buildkit.Opt{
-		SessionManager:      sm,
-		Root:                filepath.Join(config.Root, "buildkit"),
-		Dist:                d.DistributionServices(),
-		NetworkController:   d.NetworkController(),
-		DefaultCgroupParent: cgroupParent,
-		RegistryHosts:       d.RegistryHosts(),
-		BuilderConfig:       config.Builder,
-		Rootless:            d.Rootless(),
-		IdentityMapping:     d.IdentityMapping(),
-		DNSConfig:           config.DNSConfig,
-		ApparmorProfile:     daemon.DefaultApparmorProfile(),
-	})
-	if err != nil {
-		return opts, err
-	}
-
-	bb, err := buildbackend.NewBackend(d.ImageService(), manager, bk, d.EventsService)
-	if err != nil {
-		return opts, errors.Wrap(err, "failed to create buildmanager")
-	}
 	return routerOptions{
-		sessionManager: sm,
-		buildBackend:   bb,
-		buildkit:       bk,
-		features:       d.Features(),
-		daemon:         d,
+		features: d.Features(),
+		daemon:   d,
 	}, nil
 }
 
@@ -460,21 +415,9 @@ func initRouter(opts routerOptions) {
 	routers := []router.Router{
 		container.NewRouter(opts.daemon, decoder, opts.daemon.RawSysInfo(true).CgroupUnified),
 		image.NewRouter(opts.daemon.ImageService()),
-		systemrouter.NewRouter(opts.daemon, nil, opts.buildkit, opts.features),
+		systemrouter.NewRouter(opts.daemon, nil, opts.features),
 		volume.NewRouter(opts.daemon.VolumesService()),
-		build.NewRouter(opts.buildBackend, opts.daemon, opts.features),
-		sessionrouter.NewRouter(opts.sessionManager),
 		distributionrouter.NewRouter(opts.daemon.ImageService()),
-	}
-
-	grpcBackends := []grpcrouter.Backend{}
-	for _, b := range []interface{}{opts.daemon, opts.buildBackend} {
-		if b, ok := b.(grpcrouter.Backend); ok {
-			grpcBackends = append(grpcBackends, b)
-		}
-	}
-	if len(grpcBackends) > 0 {
-		routers = append(routers, grpcrouter.NewRouter(grpcBackends...))
 	}
 
 	if opts.daemon.NetworkControllerEnabled() {
@@ -570,7 +513,8 @@ func newAPIServerConfig(cli *DaemonCli) (*apiserver.Config, error) {
 
 // checkTLSAuthOK checks basically for an explicitly disabled TLS/TLSVerify
 // Going forward we do not want to support a scenario where dockerd listens
-//   on TCP without either TLS client auth (or an explicit opt-in to disable it)
+//
+//	on TCP without either TLS client auth (or an explicit opt-in to disable it)
 func checkTLSAuthOK(c *config.Config) bool {
 	if c.TLS == nil {
 		// Either TLS is enabled by default, in which case TLS verification should be enabled by default, or explicitly disabled

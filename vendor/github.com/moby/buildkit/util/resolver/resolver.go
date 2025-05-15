@@ -14,7 +14,6 @@ import (
 
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/moby/buildkit/cmd/buildkitd/config"
-	"github.com/moby/buildkit/util/tracing"
 	"github.com/pkg/errors"
 )
 
@@ -46,7 +45,7 @@ func fillInsecureOpts(host string, c config.RegistryConfig, h docker.RegistryHos
 		transport := newDefaultTransport()
 		transport.TLSClientConfig = tc
 		h2.Client = &http.Client{
-			Transport: tracing.NewTransport(transport),
+			Transport: transport,
 		}
 		tc.InsecureSkipVerify = true
 		hosts = append(hosts, h2)
@@ -57,7 +56,7 @@ func fillInsecureOpts(host string, c config.RegistryConfig, h docker.RegistryHos
 		transport.TLSClientConfig = tc
 
 		h.Client = &http.Client{
-			Transport: tracing.NewTransport(transport),
+			Transport: transport,
 		}
 		hosts = append(hosts, h)
 	}
@@ -172,7 +171,7 @@ func NewRegistryConfig(m map[string]config.RegistryConfig) docker.RegistryHosts 
 
 func newDefaultClient() *http.Client {
 	return &http.Client{
-		Transport: tracing.NewTransport(newDefaultTransport()),
+		Transport: newDefaultTransport(),
 	}
 }
 

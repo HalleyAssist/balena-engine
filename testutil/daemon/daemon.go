@@ -836,7 +836,6 @@ func cleanupDaemonStorage(t testing.TB, d *Daemon) {
 	t.Helper()
 	dirs := []string{
 		"builder",
-		"buildkit",
 		"containers",
 		"image",
 		"network",

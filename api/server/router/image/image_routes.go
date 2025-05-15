@@ -31,9 +31,7 @@ func (s *imageRouter) postImagesCreate(ctx context.Context, w http.ResponseWrite
 
 	var (
 		image    = r.Form.Get("fromImage")
-		repo     = r.Form.Get("repo")
 		tag      = r.Form.Get("tag")
-		message  = r.Form.Get("message")
 		err      error
 		output   = ioutils.NewWriteFlusher(w)
 		platform *specs.Platform
@@ -77,15 +75,7 @@ func (s *imageRouter) postImagesCreate(ctx context.Context, w http.ResponseWrite
 		}
 		err = s.backend.PullImage(ctx, image, tag, platform, metaHeaders, authConfig, output)
 	} else { // import
-		src := r.Form.Get("fromSrc")
-		// 'err' MUST NOT be defined within this block, we need any error
-		// generated from the download to be available to the output
-		// stream processing below
-		os := ""
-		if platform != nil {
-			os = platform.OS
-		}
-		err = s.backend.ImportImage(src, repo, os, tag, message, r.Body, output, r.Form["changes"])
+		return errors.New("Import is not supported in this API version")
 	}
 	if err != nil {
 		if !output.Flushed() {
