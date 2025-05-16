@@ -47,6 +47,7 @@ func main() {
 		containerdShimRuncV2.Main()
 	case "balena-containerd-ctr", "balena-engine-containerd-ctr":
 		runtime.GOMAXPROCS(1)
+		debug.SetGCPercent(5)
 		ctr.Main()
 	case "balena-runc", "balena-engine-runc":
 		runtime.GOMAXPROCS(1)
