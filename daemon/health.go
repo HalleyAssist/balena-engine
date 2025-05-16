@@ -107,7 +107,7 @@ func (p *cmdProbe) run(ctx context.Context, d *Daemon, cntr *container.Container
 	}
 
 	// Can now cleanup the exec command
-	if info.ExitCode == 0 {
+	if *info.ExitCode == 0 {
 		// The exec command is not running anymore, so we can remove it
 		d.execCommands.Delete(execConfig.ID, execConfig.Pid)
 	}
