@@ -100,6 +100,15 @@ func (daemon *Daemon) ContainerExecCreate(name string, config *types.ExecConfig)
 		return "", err
 	}
 
+	liveExecCommands := len(daemon.containerExecIds())
+	if liveExecCommands >= 3 {
+		liveExecCommands -= daemon._execCommandGC()
+		if liveExecCommands >= 3 {
+			err := fmt.Errorf("Error: Too many exec commands running (%d)", liveExecCommands)
+			return "", errdefs.Conflict(err)
+		}
+	}
+
 	cmd := strslice.StrSlice(config.Cmd)
 	entrypoint, args := daemon.getEntrypointAndArgs(strslice.StrSlice{}, cmd)
 
@@ -159,15 +168,6 @@ func (daemon *Daemon) ContainerExecStart(ctx context.Context, name string, stdin
 	ec, err := daemon.getExecConfig(name)
 	if err != nil {
 		return errExecNotFound(name)
-	}
-
-	liveExecCommands := daemon.containerExecIds()
-	if len(liveExecCommands) >= 3 {
-		daemon._execCommandGC()
-		if len(liveExecCommands) >= 3 {
-			err := fmt.Errorf("Error: Too many exec commands running (%d)", len(liveExecCommands))
-			return errdefs.Conflict(err)
-		}
 	}
 
 	ec.Lock()
@@ -312,7 +312,7 @@ func (daemon *Daemon) ContainerExecStart(ctx context.Context, name string, stdin
 	return nil
 }
 
-func (daemon *Daemon) _execCommandGC() {
+func (daemon *Daemon) _execCommandGC() int {
 	var (
 		cleaned          int
 		liveExecCommands = daemon.containerExecIds()
@@ -326,6 +326,8 @@ func (daemon *Daemon) _execCommandGC() {
 	if cleaned > 0 {
 		logrus.Debugf("clean %d unused exec commands", cleaned)
 	}
+
+	return cleaned
 }
 
 // execCommandGC runs a ticker to clean up the daemon references

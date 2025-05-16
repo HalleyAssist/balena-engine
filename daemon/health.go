@@ -105,6 +105,13 @@ func (p *cmdProbe) run(ctx context.Context, d *Daemon, cntr *container.Container
 	if info.ExitCode == nil {
 		return nil, fmt.Errorf("healthcheck for container %s has no exit code", cntr.ID)
 	}
+
+	// Can now cleanup the exec command
+	if *info.ExitCode == 0 {
+		// The exec command is not running anymore, so we can remove it
+		d.execCommands.Delete(execConfig.ID, execConfig.Pid)
+	}
+
 	// Note: Go's json package will handle invalid UTF-8 for us
 	out := output.String()
 	return &types.HealthcheckResult{
