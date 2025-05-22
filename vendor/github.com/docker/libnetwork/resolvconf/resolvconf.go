@@ -66,13 +66,13 @@ var (
 	// 1000+ character regexp with exact and complete IPv6 validation
 	ipv6Address = `([0-9A-Fa-f]{0,4}:){2,7}([0-9A-Fa-f]{0,4})(%\w+)?`
 
-	localhostNSRegexp = regexp.MustCompile(`(?m)^nameserver\s+` + dns.IPLocalhost + `\s*\n*`)
-	nsIPv6Regexp      = regexp.MustCompile(`(?m)^nameserver\s+` + ipv6Address + `\s*\n*`)
-	nsRegexp          = regexp.MustCompile(`^\s*nameserver\s*((` + ipv4Address + `)|(` + ipv6Address + `))\s*$`)
-	nsIPv6Regexpmatch = regexp.MustCompile(`^\s*nameserver\s*((` + ipv6Address + `))\s*$`)
-	nsIPv4Regexpmatch = regexp.MustCompile(`^\s*nameserver\s*((` + ipv4Address + `))\s*$`)
-	searchRegexp      = regexp.MustCompile(`^\s*search\s*(([^\s]+\s*)*)$`)
-	optionsRegexp     = regexp.MustCompile(`^\s*options\s*(([^\s]+\s*)*)$`)
+	localhostNSRegexp *regexp.Regexp
+	nsIPv6Regexp      *regexp.Regexp
+	nsRegexp          *regexp.Regexp
+	nsIPv6Regexpmatch *regexp.Regexp
+	nsIPv4Regexpmatch *regexp.Regexp
+	searchRegexp      *regexp.Regexp
+	optionsRegexp     *regexp.Regexp
 )
 
 var lastModified struct {
@@ -139,16 +139,23 @@ func GetLastModified() *File {
 }
 
 // FilterResolvDNS cleans up the config in resolvConf.  It has two main jobs:
-// 1. It looks for localhost (127.*|::1) entries in the provided
-//    resolv.conf, removing local nameserver entries, and, if the resulting
-//    cleaned config has no defined nameservers left, adds default DNS entries
-// 2. Given the caller provides the enable/disable state of IPv6, the filter
-//    code will remove all IPv6 nameservers if it is not enabled for containers
-//
+//  1. It looks for localhost (127.*|::1) entries in the provided
+//     resolv.conf, removing local nameserver entries, and, if the resulting
+//     cleaned config has no defined nameservers left, adds default DNS entries
+//  2. Given the caller provides the enable/disable state of IPv6, the filter
+//     code will remove all IPv6 nameservers if it is not enabled for containers
 func FilterResolvDNS(resolvConf []byte, ipv6Enabled bool) (*File, error) {
+	if localhostNSRegexp == nil {
+		localhostNSRegexp = regexp.MustCompile(`(?m)^nameserver\s+` + dns.IPLocalhost + `\s*\n*`)
+	}
+
 	cleanedResolvConf := localhostNSRegexp.ReplaceAll(resolvConf, []byte{})
 	// if IPv6 is not enabled, also clean out any IPv6 address nameserver
 	if !ipv6Enabled {
+		if nsIPv6Regexp == nil {
+			nsIPv6Regexp = regexp.MustCompile(`(?m)^nameserver\s+` + ipv6Address + `\s*\n*`)
+		}
+
 		cleanedResolvConf = nsIPv6Regexp.ReplaceAll(cleanedResolvConf, []byte{})
 	}
 	// if the resulting resolvConf has no more nameservers defined, add appropriate
@@ -187,6 +194,17 @@ func getLines(input []byte, commentMarker []byte) [][]byte {
 // GetNameservers returns nameservers (if any) listed in /etc/resolv.conf
 func GetNameservers(resolvConf []byte, kind int) []string {
 	nameservers := []string{}
+
+	if nsRegexp == nil {
+		regexp.MustCompile(`^\s*nameserver\s*((` + ipv4Address + `)|(` + ipv6Address + `))\s*$`)
+	}
+	if nsIPv4Regexpmatch == nil {
+		nsIPv4Regexpmatch = regexp.MustCompile(`^\s*nameserver\s*((` + ipv4Address + `))\s*$`)
+	}
+	if nsIPv6Regexpmatch == nil {
+		nsIPv6Regexpmatch = regexp.MustCompile(`^\s*nameserver\s*((` + ipv6Address + `))\s*$`)
+	}
+
 	for _, line := range getLines(resolvConf, []byte("#")) {
 		var ns [][]byte
 		if kind == types.IP {
@@ -226,6 +244,10 @@ func GetNameserversAsCIDR(resolvConf []byte) []string {
 // one is returned.
 func GetSearchDomains(resolvConf []byte) []string {
 	domains := []string{}
+	if searchRegexp == nil {
+		searchRegexp = regexp.MustCompile(`^\s*search\s*(([^\s]+\s*)*)$`)
+	}
+
 	for _, line := range getLines(resolvConf, []byte("#")) {
 		match := searchRegexp.FindSubmatch(line)
 		if match == nil {
@@ -241,6 +263,9 @@ func GetSearchDomains(resolvConf []byte) []string {
 // one is returned.
 func GetOptions(resolvConf []byte) []string {
 	options := []string{}
+	if optionsRegexp == nil {
+		optionsRegexp = regexp.MustCompile(`^\s*options\s*(([^\s]+\s*)*)$`)
+	}
 	for _, line := range getLines(resolvConf, []byte("#")) {
 		match := optionsRegexp.FindSubmatch(line)
 		if match == nil {
