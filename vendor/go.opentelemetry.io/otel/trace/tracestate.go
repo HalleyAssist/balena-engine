@@ -32,9 +32,9 @@ var (
 	withTenantKeyFormat = `[a-z0-9][_0-9a-z\-\*\/]{0,240}@[a-z][_0-9a-z\-\*\/]{0,13}`
 	valueFormat         = `[\x20-\x2b\x2d-\x3c\x3e-\x7e]{0,255}[\x21-\x2b\x2d-\x3c\x3e-\x7e]`
 
-	keyRe    = regexp.MustCompile(`^((` + noTenantKeyFormat + `)|(` + withTenantKeyFormat + `))$`)
-	valueRe  = regexp.MustCompile(`^(` + valueFormat + `)$`)
-	memberRe = regexp.MustCompile(`^\s*((` + noTenantKeyFormat + `)|(` + withTenantKeyFormat + `))=(` + valueFormat + `)\s*$`)
+	keyRe    *regexp.Regexp
+	valueRe  *regexp.Regexp
+	memberRe *regexp.Regexp
 
 	errInvalidKey    errorConst = "invalid tracestate key"
 	errInvalidValue  errorConst = "invalid tracestate value"
@@ -49,6 +49,14 @@ type member struct {
 }
 
 func newMember(key, value string) (member, error) {
+	if keyRe == nil {
+		keyRe = regexp.MustCompile(`^(` + noTenantKeyFormat + `)|(` + withTenantKeyFormat + `)$`)
+	}
+
+	if valueRe == nil {
+		valueRe = regexp.MustCompile(`^(` + valueFormat + `)$`)
+	}
+
 	if !keyRe.MatchString(key) {
 		return member{}, fmt.Errorf("%w: %s", errInvalidKey, key)
 	}
@@ -59,6 +67,10 @@ func newMember(key, value string) (member, error) {
 }
 
 func parseMemeber(m string) (member, error) {
+	if memberRe == nil {
+		memberRe = regexp.MustCompile(`^(` + noTenantKeyFormat + `)|(` + withTenantKeyFormat + `)=(` + valueFormat + `)$`)
+	}
+
 	matches := memberRe.FindStringSubmatch(m)
 	if len(matches) != 5 {
 		return member{}, fmt.Errorf("%w: %s", errInvalidMember, m)
