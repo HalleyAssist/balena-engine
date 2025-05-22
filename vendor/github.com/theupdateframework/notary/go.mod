@@ -38,10 +38,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v0.9.0-pre1.0.20180209125602-c332b6f63c06
-	github.com/prometheus/client_model v0.0.0-20171117100541-99fa1f4be8e5 // indirect
-	github.com/prometheus/common v0.0.0-20180110214958-89604d197083 // indirect
-	github.com/prometheus/procfs v0.0.0-20180125133057-cb4147076ac7 // indirect
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cast v0.0.0-20150508191742-4d07383ffe94 // indirect
 	github.com/spf13/cobra v0.0.1
