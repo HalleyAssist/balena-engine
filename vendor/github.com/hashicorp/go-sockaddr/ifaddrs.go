@@ -13,12 +13,39 @@ import (
 )
 
 var (
-	// Centralize all regexps and regexp.Copy() where necessary.
-	signRE       *regexp.Regexp = regexp.MustCompile(`^[\s]*[+-]`)
-	whitespaceRE *regexp.Regexp = regexp.MustCompile(`[\s]+`)
-	ifNameRE     *regexp.Regexp = regexp.MustCompile(`^(?:Ethernet|Wireless LAN) adapter ([^:]+):`)
-	ipAddrRE     *regexp.Regexp = regexp.MustCompile(`^   IPv[46] Address\. \. \. \. \. \. \. \. \. \. \. : ([^\s]+)`)
+	signRE       *regexp.Regexp
+	whitespaceRE *regexp.Regexp
+	ifNameRE     *regexp.Regexp
+	ipAddrRE     *regexp.Regexp
 )
+
+func getSignRE() *regexp.Regexp {
+	if signRE == nil {
+		signRE = regexp.MustCompile(`^[\s]*[+-]`)
+	}
+	return signRE
+}
+
+func getWhitespaceRE() *regexp.Regexp {
+	if whitespaceRE == nil {
+		whitespaceRE = regexp.MustCompile(`[\s]+`)
+	}
+	return whitespaceRE
+}
+
+func getIfNameRE() *regexp.Regexp {
+	if ifNameRE == nil {
+		ifNameRE = regexp.MustCompile(`^(?:Ethernet|Wireless LAN) adapter ([^:]+):`)
+	}
+	return ifNameRE
+}
+
+func getIPAddrRE() *regexp.Regexp {
+	if ipAddrRE == nil {
+		ipAddrRE = regexp.MustCompile(`^   IPv[46] Address\. \. \. \. \. \. \. \. \. \. \. : ([^\s]+)`)
+	}
+	return ipAddrRE
+}
 
 // IfAddrs is a slice of IfAddr
 type IfAddrs []IfAddr
@@ -301,7 +328,7 @@ func GetDefaultInterfaces() (IfAddrs, error) {
 //
 // ```
 // $ sockaddr eval -r '{{GetAllInterfaces | include "type" "ip" | include "flags" "forwardable" | include "flags" "up" | sort "default,type,size" | include "RFC" "6890" }}'
-/// ```
+// / ```
 func GetPrivateInterfaces() (IfAddrs, error) {
 	privateIfs, err := GetAllInterfaces()
 	if err != nil {
@@ -349,7 +376,7 @@ func GetPrivateInterfaces() (IfAddrs, error) {
 //
 // ```
 // $ sockaddr eval -r '{{GetAllInterfaces | include "type" "ip" | include "flags" "forwardable" | include "flags" "up" | sort "default,type,size" | exclude "RFC" "6890" }}'
-/// ```
+// / ```
 func GetPublicInterfaces() (IfAddrs, error) {
 	publicIfs, err := GetAllInterfaces()
 	if err != nil {
@@ -725,7 +752,7 @@ func IfByNetwork(selectorParam string, inputIfAddrs IfAddrs) (IfAddrs, IfAddrs, 
 func IfAddrMath(operation, value string, inputIfAddr IfAddr) (IfAddr, error) {
 	// Regexp used to enforce the sign being a required part of the grammar for
 	// some values.
-	signRe := signRE.Copy()
+	signRe := getSignRE().Copy()
 
 	switch strings.ToLower(operation) {
 	case "address":
@@ -1214,7 +1241,7 @@ func parseDefaultIfNameFromIPCmd(routeOut string) (string, error) {
 // Android.
 func parseDefaultIfNameFromIPCmdAndroid(routeOut string) (string, error) {
 	parsedLines := parseIfNameFromIPCmd(routeOut)
-	if (len(parsedLines) > 0) {
+	if len(parsedLines) > 0 {
 		ifName := strings.TrimSpace(parsedLines[0][4])
 		return ifName, nil
 	}
@@ -1222,12 +1249,11 @@ func parseDefaultIfNameFromIPCmdAndroid(routeOut string) (string, error) {
 	return "", errors.New("No default interface found")
 }
 
-
 // parseIfNameFromIPCmd parses interfaces from ip(8) for
 // Linux.
 func parseIfNameFromIPCmd(routeOut string) [][]string {
 	lines := strings.Split(routeOut, "\n")
-	re := whitespaceRE.Copy()
+	re := getWhitespaceRE().Copy()
 	parsedLines := make([][]string, 0, len(lines))
 	for _, line := range lines {
 		kvs := re.Split(line, -1)
@@ -1264,7 +1290,7 @@ func parseDefaultIfNameWindows(routeOut, ipconfigOut string) (string, error) {
 // support added.
 func parseDefaultIPAddrWindowsRoute(routeOut string) (string, error) {
 	lines := strings.Split(routeOut, "\n")
-	re := whitespaceRE.Copy()
+	re := getWhitespaceRE().Copy()
 	for _, line := range lines {
 		kvs := re.Split(strings.TrimSpace(line), -1)
 		if len(kvs) < 3 {
@@ -1284,8 +1310,8 @@ func parseDefaultIPAddrWindowsRoute(routeOut string) (string, error) {
 // interface name forwarding traffic to the default gateway.
 func parseDefaultIfNameWindowsIPConfig(defaultIPAddr, routeOut string) (string, error) {
 	lines := strings.Split(routeOut, "\n")
-	ifNameRe := ifNameRE.Copy()
-	ipAddrRe := ipAddrRE.Copy()
+	ifNameRe := getIfNameRE().Copy()
+	ipAddrRe := getIPAddrRE().Copy()
 	var ifName string
 	for _, line := range lines {
 		switch ifNameMatches := ifNameRe.FindStringSubmatch(line); {

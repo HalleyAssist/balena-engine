@@ -21,8 +21,15 @@ var (
 		"git":       {"git://", "github.com/", "git@"},
 		"transport": {"tcp://", "tcp+tls://", "udp://", "unix://", "unixgram://"},
 	}
-	urlPathWithFragmentSuffix = regexp.MustCompile(".git(?:#.+)?$")
+	urlPathWithFragmentSuffix *regexp.Regexp
 )
+
+func getURLPathWithFragmentSuffix() *regexp.Regexp {
+	if urlPathWithFragmentSuffix == nil {
+		urlPathWithFragmentSuffix = regexp.MustCompile(".git(?:#.+)?$")
+	}
+	return urlPathWithFragmentSuffix
+}
 
 // IsURL returns true if the provided str is an HTTP(S) URL.
 func IsURL(str string) bool {
@@ -31,7 +38,7 @@ func IsURL(str string) bool {
 
 // IsGitURL returns true if the provided str is a git repository URL.
 func IsGitURL(str string) bool {
-	if IsURL(str) && urlPathWithFragmentSuffix.MatchString(str) {
+	if IsURL(str) && getURLPathWithFragmentSuffix().MatchString(str) {
 		return true
 	}
 	return checkURL(str, "git")

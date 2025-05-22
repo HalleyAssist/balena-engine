@@ -20,13 +20,20 @@ import (
 )
 
 var (
-	stringIDRegexp      = regexp.MustCompile(`^[a-f0-9]{64}(-init)?$`)
+	stringIDRegexp      *regexp.Regexp
 	supportedAlgorithms = []digest.Algorithm{
 		digest.SHA256,
 		// digest.SHA384, // Currently not used
 		// digest.SHA512, // Currently not used
 	}
 )
+
+func getStringIDRegexp() *regexp.Regexp {
+	if stringIDRegexp == nil {
+		stringIDRegexp = regexp.MustCompile(`^[a-f0-9]{64}(-init)?$`)
+	}
+	return stringIDRegexp
+}
 
 type fileMetadataStore struct {
 	root string
@@ -299,7 +306,7 @@ func (fms *fileMetadataStore) GetMountID(mount string) (string, error) {
 	}
 	content := strings.TrimSpace(string(contentBytes))
 
-	if !stringIDRegexp.MatchString(content) {
+	if !getStringIDRegexp().MatchString(content) {
 		return "", errors.New("invalid mount id value")
 	}
 
@@ -316,7 +323,7 @@ func (fms *fileMetadataStore) GetInitID(mount string) (string, error) {
 	}
 	content := strings.TrimSpace(string(contentBytes))
 
-	if !stringIDRegexp.MatchString(content) {
+	if !getStringIDRegexp().MatchString(content) {
 		return "", errors.New("invalid init id value")
 	}
 

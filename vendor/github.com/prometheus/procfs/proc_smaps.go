@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !windows
 // +build !windows
 
 package procfs
@@ -29,8 +30,15 @@ import (
 
 var (
 	// match the header line before each mapped zone in /proc/pid/smaps
-	procSMapsHeaderLine = regexp.MustCompile(`^[a-f0-9].*$`)
+	procSMapsHeaderLine *regexp.Regexp
 )
+
+func getProcSMapsHeaderLine() *regexp.Regexp {
+	if procSMapsHeaderLine == nil {
+		procSMapsHeaderLine = regexp.MustCompile(`^[a-f0-9].*$`)
+	}
+	return procSMapsHeaderLine
+}
 
 type ProcSMapsRollup struct {
 	// Amount of the mapping that is currently resident in RAM
@@ -101,7 +109,7 @@ func (p Proc) procSMapsRollupManual() (ProcSMapsRollup, error) {
 	for scan.Scan() {
 		line := scan.Text()
 
-		if procSMapsHeaderLine.MatchString(line) {
+		if getProcSMapsHeaderLine().MatchString(line) {
 			continue
 		}
 

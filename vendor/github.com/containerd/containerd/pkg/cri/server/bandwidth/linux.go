@@ -52,9 +52,23 @@ import (
 )
 
 var (
-	classShowMatcher      = regexp.MustCompile(`class htb (1:\d+)`)
-	classAndHandleMatcher = regexp.MustCompile(`filter parent 1:.*fh (\d+::\d+).*flowid (\d+:\d+)`)
+	classShowMatcher      *regexp.Regexp
+	classAndHandleMatcher *regexp.Regexp
 )
+
+func getClassShowMatcher() *regexp.Regexp {
+	if classShowMatcher == nil {
+		classShowMatcher = regexp.MustCompile(`class htb (1:\d+)`)
+	}
+	return classShowMatcher
+}
+
+func getClassAndHandleMatcher() *regexp.Regexp {
+	if classAndHandleMatcher == nil {
+		classAndHandleMatcher = regexp.MustCompile(`filter parent 1:.*fh (\d+::\d+).*flowid (\d+:\d+)`)
+	}
+	return classAndHandleMatcher
+}
 
 // tcShaper provides an implementation of the Shaper interface on Linux using the 'tc' tool.
 // In general, using this requires that the caller posses the NET_CAP_ADMIN capability, though if you
@@ -100,7 +114,7 @@ func (t *tcShaper) nextClassID() (int, error) {
 		}
 		// expected tc line:
 		// class htb 1:1 root prio 0 rate 1000Kbit ceil 1000Kbit burst 1600b cburst 1600b
-		matches := classShowMatcher.FindStringSubmatch(line)
+		matches := getClassShowMatcher().FindStringSubmatch(line)
 		if len(matches) != 2 {
 			return -1, fmt.Errorf("unexpected output from tc: %s (%v)", scanner.Text(), matches)
 		}
@@ -179,7 +193,7 @@ func (t *tcShaper) findCIDRClass(cidr string) (classAndHandleList [][]string, fo
 			// expected tc line:
 			// `filter parent 1: protocol ip pref 1 u32 fh 800::800 order 2048 key ht 800 bkt 0 flowid 1:1` (old version) or
 			// `filter parent 1: protocol ip pref 1 u32 chain 0 fh 800::800 order 2048 key ht 800 bkt 0 flowid 1:1 not_in_hw` (new version)
-			matches := classAndHandleMatcher.FindStringSubmatch(filter)
+			matches := getClassAndHandleMatcher().FindStringSubmatch(filter)
 			if len(matches) != 3 {
 				return classAndHandleList, false, fmt.Errorf("unexpected output from tc: %s %d (%v)", filter, len(matches), matches)
 			}

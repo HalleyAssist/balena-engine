@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build linux
 // +build linux
 
 package procfs
@@ -58,9 +59,23 @@ type CPUInfo struct {
 }
 
 var (
-	cpuinfoClockRegexp          = regexp.MustCompile(`([\d.]+)`)
-	cpuinfoS390XProcessorRegexp = regexp.MustCompile(`^processor\s+(\d+):.*`)
+	cpuinfoClockRegexp          *regexp.Regexp
+	cpuinfoS390XProcessorRegexp *regexp.Regexp
 )
+
+func getCPUInfoClockRegexp() *regexp.Regexp {
+	if cpuinfoClockRegexp == nil {
+		cpuinfoClockRegexp = regexp.MustCompile(`([\d.]+)`)
+	}
+	return cpuinfoClockRegexp
+}
+
+func getCPUInfoS390XProcessorRegexp() *regexp.Regexp {
+	if cpuinfoS390XProcessorRegexp == nil {
+		cpuinfoS390XProcessorRegexp = regexp.MustCompile(`^processor\s+(\d+):.*`)
+	}
+	return cpuinfoS390XProcessorRegexp
+}
 
 // CPUInfo returns information about current system CPUs.
 // See https://www.kernel.org/doc/Documentation/filesystems/proc.txt
@@ -280,7 +295,7 @@ func parseCPUInfoS390X(info []byte) ([]CPUInfo, error) {
 			commonCPUInfo.Flags = strings.Fields(field[1])
 		}
 		if strings.HasPrefix(line, "processor") {
-			match := cpuinfoS390XProcessorRegexp.FindStringSubmatch(line)
+			match := getCPUInfoS390XProcessorRegexp().FindStringSubmatch(line)
 			if len(match) < 2 {
 				return nil, fmt.Errorf("invalid cpuinfo file: %q", firstLine)
 			}
@@ -308,7 +323,7 @@ func parseCPUInfoS390X(info []byte) ([]CPUInfo, error) {
 		case "cpu number":
 			i++
 		case "cpu MHz dynamic":
-			clock := cpuinfoClockRegexp.FindString(strings.TrimSpace(field[1]))
+			clock := getCPUInfoClockRegexp().FindString(strings.TrimSpace(field[1]))
 			v, err := strconv.ParseFloat(clock, 64)
 			if err != nil {
 				return nil, err
@@ -413,7 +428,7 @@ func parseCPUInfoPPC(info []byte) ([]CPUInfo, error) {
 		case "cpu":
 			cpuinfo[i].VendorID = field[1]
 		case "clock":
-			clock := cpuinfoClockRegexp.FindString(strings.TrimSpace(field[1]))
+			clock := getCPUInfoClockRegexp().FindString(strings.TrimSpace(field[1]))
 			v, err := strconv.ParseFloat(clock, 64)
 			if err != nil {
 				return nil, err

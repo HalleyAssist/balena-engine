@@ -151,8 +151,14 @@ func (d *Decoder) Read() (Token, error) {
 	return tok, nil
 }
 
-// Any sequence that looks like a non-delimiter (for error reporting).
-var errRegexp = regexp.MustCompile(`^([-+._a-zA-Z0-9]{1,32}|.)`)
+var errRegexp *regexp.Regexp
+
+func getErrRegexp() *regexp.Regexp {
+	if errRegexp == nil {
+		errRegexp = regexp.MustCompile(`^([-+._a-zA-Z0-9]{1,32}|.)`)
+	}
+	return errRegexp
+}
 
 // parseNext parses for the next JSON token. It returns a Token object for
 // different types, except for Name. It does not handle whether the next token
@@ -209,7 +215,7 @@ func (d *Decoder) parseNext() (Token, error) {
 	case ',':
 		return d.consumeToken(comma, 1), nil
 	}
-	return Token{}, d.newSyntaxError(d.currPos(), "invalid value %s", errRegexp.Find(in))
+	return Token{}, d.newSyntaxError(d.currPos(), "invalid value %s", getErrRegexp().Find(in))
 }
 
 // newSyntaxError returns an error with line and column information useful for

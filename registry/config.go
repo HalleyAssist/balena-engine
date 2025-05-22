@@ -53,11 +53,18 @@ var (
 	ErrInvalidRepositoryName = errors.New("Invalid repository name (ex: \"registry.domain.tld/myrepos\")")
 
 	emptyServiceConfig, _ = newServiceConfig(ServiceOptions{})
-	validHostPortRegex    = regexp.MustCompile(`^` + reference.DomainRegexp.String() + `$`)
+	validHostPortRegex    *regexp.Regexp
 
 	// for mocking in unit tests
 	lookupIP = net.LookupIP
 )
+
+func getValidHostPortRegex() *regexp.Regexp {
+	if validHostPortRegex == nil {
+		validHostPortRegex = regexp.MustCompile(`^` + reference.DomainRegexp.String() + `$`)
+	}
+	return validHostPortRegex
+}
 
 // newServiceConfig returns a new instance of ServiceConfig
 func newServiceConfig(options ServiceOptions) (*serviceConfig, error) {
@@ -353,7 +360,7 @@ func validateHostPort(s string) error {
 	}
 	// If match against the `host:port` pattern fails,
 	// it might be `IPv6:port`, which will be captured by net.ParseIP(host)
-	if !validHostPortRegex.MatchString(s) && net.ParseIP(host) == nil {
+	if !getValidHostPortRegex().MatchString(s) && net.ParseIP(host) == nil {
 		return fmt.Errorf("invalid host %q", host)
 	}
 	if port != "" {

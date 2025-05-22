@@ -81,7 +81,14 @@ func resolvableTag(tag string) bool {
 	return false
 }
 
-var yamlStyleFloat = regexp.MustCompile(`^[-+]?(\.[0-9]+|[0-9]+(\.[0-9]*)?)([eE][-+]?[0-9]+)?$`)
+var yamlStyleFloat *regexp.Regexp
+
+func getYamlStyleFloat() *regexp.Regexp {
+	if yamlStyleFloat == nil {
+		yamlStyleFloat = regexp.MustCompile(`^[-+]?(\.[0-9]+|[0-9]+(\.[0-9]*)?)([eE][-+]?[0-9]+)?$`)
+	}
+	return yamlStyleFloat
+}
 
 func resolve(tag string, in string) (rtag string, out interface{}) {
 	if !resolvableTag(tag) {
@@ -160,7 +167,7 @@ func resolve(tag string, in string) (rtag string, out interface{}) {
 			if err == nil {
 				return yaml_INT_TAG, uintv
 			}
-			if yamlStyleFloat.MatchString(plain) {
+			if getYamlStyleFloat().MatchString(plain) {
 				floatv, err := strconv.ParseFloat(plain, 64)
 				if err == nil {
 					return yaml_FLOAT_TAG, floatv

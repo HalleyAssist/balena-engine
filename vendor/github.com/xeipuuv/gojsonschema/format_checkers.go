@@ -129,17 +129,11 @@ var (
 		},
 	}
 
-	// Regex credit: https://www.socketloop.com/tutorials/golang-validate-hostname
-	rxHostname = regexp.MustCompile(`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`)
-
-	// Use a regex to make sure curly brackets are balanced properly after validating it as a AURI
-	rxURITemplate = regexp.MustCompile("^([^{]*({[^}]*})?)*$")
-
-	rxUUID = regexp.MustCompile("^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
-
-	rxJSONPointer = regexp.MustCompile("^(?:/(?:[^~/]|~0|~1)*)*$")
-
-	rxRelJSONPointer = regexp.MustCompile("^(?:0|[1-9][0-9]*)(?:#|(?:/(?:[^~/]|~0|~1)*)*)$")
+	rxHostname       *regexp.Regexp
+	rxURITemplate    *regexp.Regexp
+	rxUUID           *regexp.Regexp
+	rxJSONPointer    *regexp.Regexp
+	rxRelJSONPointer *regexp.Regexp
 
 	lock = new(sync.RWMutex)
 )
@@ -310,7 +304,7 @@ func (f URITemplateFormatChecker) IsFormat(input interface{}) bool {
 		return false
 	}
 
-	return rxURITemplate.MatchString(u.Path)
+	return getRxURITemplate().MatchString(u.Path)
 }
 
 // IsFormat checks if input is a correctly formatted hostname
@@ -320,7 +314,7 @@ func (f HostnameFormatChecker) IsFormat(input interface{}) bool {
 		return false
 	}
 
-	return rxHostname.MatchString(asString) && len(asString) < 256
+	return getRxHostname().MatchString(asString) && len(asString) < 256
 }
 
 // IsFormat checks if input is a correctly formatted UUID
@@ -330,7 +324,7 @@ func (f UUIDFormatChecker) IsFormat(input interface{}) bool {
 		return false
 	}
 
-	return rxUUID.MatchString(asString)
+	return getRxUUID().MatchString(asString)
 }
 
 // IsFormat checks if input is a correctly formatted regular expression
@@ -354,7 +348,7 @@ func (f JSONPointerFormatChecker) IsFormat(input interface{}) bool {
 		return false
 	}
 
-	return rxJSONPointer.MatchString(asString)
+	return getRxJSONPointer().MatchString(asString)
 }
 
 // IsFormat checks if input is a correctly formatted relative JSON Pointer
@@ -364,5 +358,40 @@ func (f RelativeJSONPointerFormatChecker) IsFormat(input interface{}) bool {
 		return false
 	}
 
-	return rxRelJSONPointer.MatchString(asString)
+	return getRxRelJSONPointer().MatchString(asString)
+}
+
+func getRxHostname() *regexp.Regexp {
+	if rxHostname == nil {
+		rxHostname = regexp.MustCompile(`^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$`)
+	}
+	return rxHostname
+}
+
+func getRxURITemplate() *regexp.Regexp {
+	if rxURITemplate == nil {
+		rxURITemplate = regexp.MustCompile("^([^{]*({[^}]*})?)*$")
+	}
+	return rxURITemplate
+}
+
+func getRxUUID() *regexp.Regexp {
+	if rxUUID == nil {
+		rxUUID = regexp.MustCompile("^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$")
+	}
+	return rxUUID
+}
+
+func getRxJSONPointer() *regexp.Regexp {
+	if rxJSONPointer == nil {
+		rxJSONPointer = regexp.MustCompile("^(?:/(?:[^~/]|~0|~1)*)*$")
+	}
+	return rxJSONPointer
+}
+
+func getRxRelJSONPointer() *regexp.Regexp {
+	if rxRelJSONPointer == nil {
+		rxRelJSONPointer = regexp.MustCompile("^(?:0|[1-9][0-9]*)(?:#|(?:/(?:[^~/]|~0|~1)*)*)$")
+	}
+	return rxRelJSONPointer
 }

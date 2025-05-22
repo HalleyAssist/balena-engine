@@ -21,7 +21,7 @@ import (
 
 var (
 	urlRe    = `((https?|ftp):\/\/|\/)[-A-Za-z0-9+&@#\/%?=~_|!:,.;\(\)]+`
-	anchorRe = regexp.MustCompile(`^(<a\shref="` + urlRe + `"(\stitle="[^"<>]+")?\s?>` + urlRe + `<\/a>)`)
+	anchorRe *regexp.Regexp
 
 	// https://www.w3.org/TR/html5/syntax.html#character-references
 	// highest unicode code point in 17 planes (2^20): 1,114,112d =
@@ -38,7 +38,7 @@ var (
 	// number ref := "#" (dec ref | hex ref)
 	// dec ref := [0-9]{1,7}
 	// hex ref := ("x" | "X") [0-9a-fA-F]{1,6}
-	htmlEntityRe = regexp.MustCompile(`&([a-zA-Z]{2,31}[0-9]{0,2}|#([0-9]{1,7}|[xX][0-9a-fA-F]{1,6}));`)
+	htmlEntityRe *regexp.Regexp
 )
 
 // Functions to parse text within a block
@@ -730,6 +730,10 @@ func entity(p *Markdown, data []byte, offset int) (int, *Node) {
 }
 
 func linkEndsWithEntity(data []byte, linkEnd int) bool {
+	if htmlEntityRe == nil {
+		htmlEntityRe = regexp.MustCompile(`&([a-zA-Z]{2,31}[0-9]{0,2}|#([0-9]{1,7}|[xX][0-9a-fA-F]{1,6}));`)
+	}
+
 	entityRanges := htmlEntityRe.FindAllIndex(data[:linkEnd], -1)
 	return entityRanges != nil && entityRanges[len(entityRanges)-1][1] == linkEnd
 }
@@ -786,6 +790,10 @@ func autoLink(p *Markdown, data []byte, offset int) (int, *Node) {
 	for anchorStart > 0 && data[anchorStart] != '<' {
 		anchorStart--
 		offsetFromAnchor++
+	}
+
+	if anchorRe == nil {
+		anchorRe = regexp.MustCompile(`^(<a\shref="` + urlRe + `"(\stitle="[^"<>]+")?\s?>` + urlRe + `<\/a>)`)
 	}
 
 	anchorStr := anchorRe.Find(data[anchorStart:])

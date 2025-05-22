@@ -7,10 +7,13 @@ import (
 	"github.com/docker/docker/api/types/filters"
 )
 
-var headerRegexp = regexp.MustCompile(`\ADocker/.+\s\((.+)\)\z`)
+var headerRegexp *regexp.Regexp
 
 // getDockerOS returns the operating system based on the server header from the daemon.
 func getDockerOS(serverHeader string) string {
+	if headerRegexp == nil {
+		headerRegexp = regexp.MustCompile(`\ADocker/.+\s\((.+)\)\z`)
+	}
 	var osType string
 	matches := headerRegexp.FindStringSubmatch(serverHeader)
 	if len(matches) > 0 {

@@ -39,8 +39,15 @@ const (
 
 var (
 	// identifierRe defines the pattern for valid identifiers.
-	identifierRe = regexp.MustCompile(reAnchor(alphanum + reGroup(separators+reGroup(alphanum)) + "*"))
+	identifierRe *regexp.Regexp
 )
+
+func getIdentifierRe() *regexp.Regexp {
+	if identifierRe == nil {
+		identifierRe = regexp.MustCompile(reAnchor(alphanum + reGroup(separators+reGroup(alphanum)) + "*"))
+	}
+	return identifierRe
+}
 
 // Validate returns nil if the string s is a valid identifier.
 //
@@ -58,8 +65,8 @@ func Validate(s string) error {
 		return fmt.Errorf("identifier %q greater than maximum length (%d characters): %w", s, maxLength, errdefs.ErrInvalidArgument)
 	}
 
-	if !identifierRe.MatchString(s) {
-		return fmt.Errorf("identifier %q must match %v: %w", s, identifierRe, errdefs.ErrInvalidArgument)
+	if !getIdentifierRe().MatchString(s) {
+		return fmt.Errorf("identifier %q must match %v: %w", s, getIdentifierRe(), errdefs.ErrInvalidArgument)
 	}
 	return nil
 }

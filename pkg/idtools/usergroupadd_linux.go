@@ -17,8 +17,15 @@ import (
 var (
 	once        sync.Once
 	userCommand string
-	idOutRegexp = regexp.MustCompile(`uid=([0-9]+).*gid=([0-9]+)`)
+	idOutRegexp *regexp.Regexp
 )
+
+func getIDOutRegexp() *regexp.Regexp {
+	if idOutRegexp == nil {
+		idOutRegexp = regexp.MustCompile(`uid=([0-9]+).*gid=([0-9]+)`)
+	}
+	return idOutRegexp
+}
 
 const (
 	// default length for a UID/GID subordinate range
@@ -40,7 +47,7 @@ func AddNamespaceRangesUser(name string) (int, int, error) {
 	if err != nil {
 		return -1, -1, fmt.Errorf("Error trying to find uid/gid for new user %q: %v", name, err)
 	}
-	matches := idOutRegexp.FindStringSubmatch(strings.TrimSpace(string(out)))
+	matches := getIDOutRegexp().FindStringSubmatch(strings.TrimSpace(string(out)))
 	if len(matches) != 3 {
 		return -1, -1, fmt.Errorf("Can't find uid, gid from `id` output: %q", string(out))
 	}

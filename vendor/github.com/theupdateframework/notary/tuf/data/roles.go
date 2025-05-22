@@ -27,7 +27,14 @@ var BaseRoles = []RoleName{
 }
 
 // Regex for validating delegation names
-var delegationRegexp = regexp.MustCompile("^[-a-z0-9_/]+$")
+var delegationRegexp *regexp.Regexp
+
+func getDelegationRegexp() *regexp.Regexp {
+	if delegationRegexp == nil {
+		delegationRegexp = regexp.MustCompile("^[-a-z0-9_/]+$")
+	}
+	return delegationRegexp
+}
 
 // ErrNoSuchRole indicates the roles doesn't exist
 type ErrNoSuchRole struct {
@@ -74,7 +81,7 @@ func IsDelegation(role RoleName) bool {
 	strRole := role.String()
 	targetsBase := CanonicalTargetsRole + "/"
 
-	whitelistedChars := delegationRegexp.MatchString(strRole)
+	whitelistedChars := getDelegationRegexp().MatchString(strRole)
 
 	// Limit size of full role string to 255 chars for db column size limit
 	correctLength := len(role) < 256

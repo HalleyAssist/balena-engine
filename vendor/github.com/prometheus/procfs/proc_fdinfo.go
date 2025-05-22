@@ -24,11 +24,11 @@ import (
 
 // Regexp variables
 var (
-	rPos          = regexp.MustCompile(`^pos:\s+(\d+)$`)
-	rFlags        = regexp.MustCompile(`^flags:\s+(\d+)$`)
-	rMntID        = regexp.MustCompile(`^mnt_id:\s+(\d+)$`)
-	rInotify      = regexp.MustCompile(`^inotify`)
-	rInotifyParts = regexp.MustCompile(`^inotify\s+wd:([0-9a-f]+)\s+ino:([0-9a-f]+)\s+sdev:([0-9a-f]+)(?:\s+mask:([0-9a-f]+))?`)
+	rPos          *regexp.Regexp
+	rFlags        *regexp.Regexp
+	rMntID        *regexp.Regexp
+	rInotify      *regexp.Regexp
+	rInotifyParts *regexp.Regexp
 )
 
 // ProcFDInfo contains represents file descriptor information.
@@ -50,6 +50,23 @@ func (p Proc) FDInfo(fd string) (*ProcFDInfo, error) {
 	data, err := util.ReadFileNoStat(p.path("fdinfo", fd))
 	if err != nil {
 		return nil, err
+	}
+
+	// Lazy init regexps
+	if rPos == nil {
+		rPos = regexp.MustCompile(`^pos:\s+(\d+)$`)
+	}
+	if rFlags == nil {
+		rFlags = regexp.MustCompile(`^flags:\s+(\d+)$`)
+	}
+	if rMntID == nil {
+		rMntID = regexp.MustCompile(`^mnt_id:\s+(\d+)$`)
+	}
+	if rInotify == nil {
+		rInotify = regexp.MustCompile(`^inotify`)
+	}
+	if rInotifyParts == nil {
+		rInotifyParts = regexp.MustCompile(`^inotify\s+wd:([0-9a-f]+)\s+ino:([0-9a-f]+)\s+sdev:([0-9a-f]+)(?:\s+mask:([0-9a-f]+))?`)
 	}
 
 	var text, pos, flags, mntid string
@@ -98,6 +115,9 @@ type InotifyInfo struct {
 
 // InotifyInfo constructor. Only available on kernel 3.8+.
 func parseInotifyInfo(line string) (*InotifyInfo, error) {
+	if rInotifyParts == nil {
+		rInotifyParts = regexp.MustCompile(`^inotify\s+wd:([0-9a-f]+)\s+ino:([0-9a-f]+)\s+sdev:([0-9a-f]+)(?:\s+mask:([0-9a-f]+))?`)
+	}
 	m := rInotifyParts.FindStringSubmatch(line)
 	if len(m) >= 4 {
 		var mask string

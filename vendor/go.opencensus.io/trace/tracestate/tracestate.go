@@ -34,8 +34,22 @@ const (
 	valueFormat            = `[\x20-\x2b\x2d-\x3c\x3e-\x7e]{0,255}[\x21-\x2b\x2d-\x3c\x3e-\x7e]`
 )
 
-var keyValidationRegExp = regexp.MustCompile(`^(` + keyFormat + `)$`)
-var valueValidationRegExp = regexp.MustCompile(`^(` + valueFormat + `)$`)
+var keyValidationRegExp *regexp.Regexp
+var valueValidationRegExp *regexp.Regexp
+
+func getKeyValidationRegExp() *regexp.Regexp {
+	if keyValidationRegExp == nil {
+		keyValidationRegExp = regexp.MustCompile(`^(` + keyFormat + `)$`)
+	}
+	return keyValidationRegExp
+}
+
+func getValueValidationRegExp() *regexp.Regexp {
+	if valueValidationRegExp == nil {
+		valueValidationRegExp = regexp.MustCompile(`^(` + valueFormat + `)$`)
+	}
+	return valueValidationRegExp
+}
 
 // Tracestate represents tracing-system specific context in a list of key-value pairs. Tracestate allows different
 // vendors propagate additional information and inter-operate with their legacy Id formats.
@@ -86,8 +100,8 @@ func (ts *Tracestate) add(entries []Entry) error {
 }
 
 func isValid(entry Entry) bool {
-	return keyValidationRegExp.MatchString(entry.Key) &&
-		valueValidationRegExp.MatchString(entry.Value)
+	return getKeyValidationRegExp().MatchString(entry.Key) &&
+		getValueValidationRegExp().MatchString(entry.Value)
 }
 
 func containsDuplicateKey(entries ...Entry) (string, bool) {

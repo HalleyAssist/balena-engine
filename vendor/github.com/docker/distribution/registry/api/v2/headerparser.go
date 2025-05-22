@@ -9,10 +9,31 @@ import (
 
 var (
 	// according to rfc7230
-	reToken            = regexp.MustCompile(`^[^"(),/:;<=>?@[\]{}[:space:][:cntrl:]]+`)
-	reQuotedValue      = regexp.MustCompile(`^[^\\"]+`)
-	reEscapedCharacter = regexp.MustCompile(`^[[:blank:][:graph:]]`)
+	reToken            *regexp.Regexp
+	reQuotedValue      *regexp.Regexp
+	reEscapedCharacter *regexp.Regexp
 )
+
+func getReToken() *regexp.Regexp {
+	if reToken == nil {
+		reToken = regexp.MustCompile(`^[^"(),/:;<=>?@[\]{}[:space:][:cntrl:]]+`)
+	}
+	return reToken
+}
+
+func getReQuotedValue() *regexp.Regexp {
+	if reQuotedValue == nil {
+		reQuotedValue = regexp.MustCompile(`^[^\\"]+`)
+	}
+	return reQuotedValue
+}
+
+func getReEscapedCharacter() *regexp.Regexp {
+	if reEscapedCharacter == nil {
+		reEscapedCharacter = regexp.MustCompile(`^[[:blank:][:graph:]]`)
+	}
+	return reEscapedCharacter
+}
 
 // parseForwardedHeader is a benevolent parser of Forwarded header defined in rfc7239. The header contains
 // a comma-separated list of forwarding key-value pairs. Each list element is set by single proxy. The
@@ -79,7 +100,7 @@ Loop:
 
 		// parse parameter (the key of key-value pair)
 		case stateParameter:
-			match := reToken.FindString(parse)
+			match := getReToken().FindString(parse)
 			if len(match) == 0 {
 				return nil, parse, fmt.Errorf("failed to parse token at position %d", len(forwarded)-len(parse))
 			}
@@ -101,7 +122,7 @@ Loop:
 				parse = parse[1:]
 				state = stateQuotedValue
 			} else {
-				value = reToken.FindString(parse)
+				value = getReToken().FindString(parse)
 				if len(value) == 0 {
 					return nil, parse, fmt.Errorf("failed to parse value at position %d", len(forwarded)-len(parse))
 				}
@@ -116,7 +137,7 @@ Loop:
 
 		// parse a part of quoted value until the first backslash
 		case stateQuotedValue:
-			match := reQuotedValue.FindString(parse)
+			match := getReQuotedValue().FindString(parse)
 			value += match
 			parse = parse[len(match):]
 			switch {
@@ -135,7 +156,7 @@ Loop:
 		// parse escaped character in a quoted string, ignore the backslash
 		// transition back to QuotedValue state
 		case stateEscapedCharacter:
-			c := reEscapedCharacter.FindString(parse)
+			c := getReEscapedCharacter().FindString(parse)
 			if len(c) == 0 {
 				return nil, parse, fmt.Errorf("invalid escape sequence at position %d", len(forwarded)-len(parse)-1)
 			}

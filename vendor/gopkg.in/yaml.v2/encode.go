@@ -290,12 +290,17 @@ func isBase60Float(s string) (result bool) {
 		return false
 	}
 	// Do the full match.
-	return base60float.MatchString(s)
+	return getBase60Float().MatchString(s)
 }
 
-// From http://yaml.org/type/float.html, except the regular expression there
-// is bogus. In practice parsers do not enforce the "\.[0-9_]*" suffix.
-var base60float = regexp.MustCompile(`^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+(?:\.[0-9_]*)?$`)
+var base60float *regexp.Regexp
+
+func getBase60Float() *regexp.Regexp {
+	if base60float == nil {
+		base60float = regexp.MustCompile(`^[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+(?:\.[0-9_]*)?$`)
+	}
+	return base60float
+}
 
 func (e *encoder) stringv(tag string, in reflect.Value) {
 	var style yaml_scalar_style_t

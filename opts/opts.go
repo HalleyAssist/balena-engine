@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	alphaRegexp  = regexp.MustCompile(`[a-zA-Z]`)
-	domainRegexp = regexp.MustCompile(`^(:?(:?[a-zA-Z0-9]|(:?[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]))(:?\.(:?[a-zA-Z0-9]|(:?[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])))*)\.?\s*$`)
+	alphaRegexp  *regexp.Regexp
+	domainRegexp *regexp.Regexp
 )
 
 // ListOpts holds a list of values and a validation function.
@@ -244,6 +244,12 @@ func ValidateDNSSearch(val string) (string, error) {
 }
 
 func validateDomain(val string) (string, error) {
+	if alphaRegexp == nil {
+		alphaRegexp = regexp.MustCompile(`[a-zA-Z]`)
+	}
+	if domainRegexp == nil {
+		domainRegexp = regexp.MustCompile(`^(:?(:?[a-zA-Z0-9]|(:?[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]))(:?\.(:?[a-zA-Z0-9]|(:?[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])))*)\.?\s*$`)
+	}
 	if alphaRegexp.FindString(val) == "" {
 		return "", fmt.Errorf("%s is not a valid domain", val)
 	}

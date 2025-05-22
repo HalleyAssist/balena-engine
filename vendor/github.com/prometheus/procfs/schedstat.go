@@ -22,9 +22,23 @@ import (
 )
 
 var (
-	cpuLineRE  = regexp.MustCompile(`cpu(\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)`)
-	procLineRE = regexp.MustCompile(`(\d+) (\d+) (\d+)`)
+	cpuLineRE  *regexp.Regexp
+	procLineRE *regexp.Regexp
 )
+
+func getCPULineRE() *regexp.Regexp {
+	if cpuLineRE == nil {
+		cpuLineRE = regexp.MustCompile(`cpu(\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)`)
+	}
+	return cpuLineRE
+}
+
+func getProcLineRE() *regexp.Regexp {
+	if procLineRE == nil {
+		procLineRE = regexp.MustCompile(`(\d+) (\d+) (\d+)`)
+	}
+	return procLineRE
+}
 
 // Schedstat contains scheduler statistics from /proc/schedstat
 //
@@ -68,7 +82,7 @@ func (fs FS) Schedstat() (*Schedstat, error) {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		match := cpuLineRE.FindStringSubmatch(scanner.Text())
+		match := getCPULineRE().FindStringSubmatch(scanner.Text())
 		if match != nil {
 			cpu := &SchedstatCPU{}
 			cpu.CPUNum = match[1]
@@ -100,7 +114,7 @@ func parseProcSchedstat(contents string) (ProcSchedstat, error) {
 		stats ProcSchedstat
 		err   error
 	)
-	match := procLineRE.FindStringSubmatch(contents)
+	match := getProcLineRE().FindStringSubmatch(contents)
 
 	if match != nil {
 		stats.RunningNanoseconds, err = strconv.ParseUint(match[1], 10, 64)

@@ -25,10 +25,31 @@ import (
 )
 
 var (
-	slabSpace  = regexp.MustCompile(`\s+`)
-	slabVer    = regexp.MustCompile(`slabinfo -`)
-	slabHeader = regexp.MustCompile(`# name`)
+	slabSpace  *regexp.Regexp
+	slabVer    *regexp.Regexp
+	slabHeader *regexp.Regexp
 )
+
+func getSlabSpace() *regexp.Regexp {
+	if slabSpace == nil {
+		slabSpace = regexp.MustCompile(`\s+`)
+	}
+	return slabSpace
+}
+
+func getSlabVer() *regexp.Regexp {
+	if slabVer == nil {
+		slabVer = regexp.MustCompile(`slabinfo -`)
+	}
+	return slabVer
+}
+
+func getSlabHeader() *regexp.Regexp {
+	if slabHeader == nil {
+		slabHeader = regexp.MustCompile(`# name`)
+	}
+	return slabHeader
+}
 
 // Slab represents a slab pool in the kernel.
 type Slab struct {
@@ -53,10 +74,10 @@ type SlabInfo struct {
 }
 
 func shouldParseSlab(line string) bool {
-	if slabVer.MatchString(line) {
+	if getSlabVer().MatchString(line) {
 		return false
 	}
-	if slabHeader.MatchString(line) {
+	if getSlabHeader().MatchString(line) {
 		return false
 	}
 	return true
@@ -65,7 +86,7 @@ func shouldParseSlab(line string) bool {
 // parseV21SlabEntry is used to parse a line from /proc/slabinfo version 2.1.
 func parseV21SlabEntry(line string) (*Slab, error) {
 	// First cleanup whitespace.
-	l := slabSpace.ReplaceAllString(line, " ")
+	l := getSlabSpace().ReplaceAllString(line, " ")
 	s := strings.Split(l, " ")
 	if len(s) != 16 {
 		return nil, fmt.Errorf("unable to parse: %q", line)

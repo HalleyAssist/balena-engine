@@ -13,13 +13,27 @@ import (
 const shortLen = 12
 
 var (
-	validShortID = regexp.MustCompile("^[a-f0-9]{12}$")
-	validHex     = regexp.MustCompile(`^[a-f0-9]{64}$`)
+	validShortID *regexp.Regexp
+	validHex     *regexp.Regexp
 )
+
+func getValidShortID() *regexp.Regexp {
+	if validShortID == nil {
+		validShortID = regexp.MustCompile("^[a-f0-9]{12}$")
+	}
+	return validShortID
+}
+
+func getValidHex() *regexp.Regexp {
+	if validHex == nil {
+		validHex = regexp.MustCompile(`^[a-f0-9]{64}$`)
+	}
+	return validHex
+}
 
 // IsShortID determines if an arbitrary string *looks like* a short ID.
 func IsShortID(id string) bool {
-	return validShortID.MatchString(id)
+	return getValidShortID().MatchString(id)
 }
 
 // TruncateID returns a shorthand version of a string identifier for convenience.
@@ -56,7 +70,7 @@ func GenerateRandomID() string {
 
 // ValidateID checks whether an ID string is a valid image ID.
 func ValidateID(id string) error {
-	if ok := validHex.MatchString(id); !ok {
+	if ok := getValidHex().MatchString(id); !ok {
 		return fmt.Errorf("image ID %q is invalid", id)
 	}
 	return nil

@@ -22,12 +22,12 @@ import (
 )
 
 var (
-	statusLineRE         = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[([U_]+)\]`)
-	recoveryLineBlocksRE = regexp.MustCompile(`\((\d+)/\d+\)`)
-	recoveryLinePctRE    = regexp.MustCompile(`= (.+)%`)
-	recoveryLineFinishRE = regexp.MustCompile(`finish=(.+)min`)
-	recoveryLineSpeedRE  = regexp.MustCompile(`speed=(.+)[A-Z]`)
-	componentDeviceRE    = regexp.MustCompile(`(.*)\[\d+\]`)
+	statusLineRE         *regexp.Regexp
+	recoveryLineBlocksRE *regexp.Regexp
+	recoveryLinePctRE    *regexp.Regexp
+	recoveryLineFinishRE *regexp.Regexp
+	recoveryLineSpeedRE  *regexp.Regexp
+	componentDeviceRE    *regexp.Regexp
 )
 
 // MDStat holds info parsed from /proc/mdstat.
@@ -166,6 +166,9 @@ func parseMDStat(mdStatData []byte) ([]MDStat, error) {
 }
 
 func evalStatusLine(deviceLine, statusLine string) (active, total, down, size int64, err error) {
+	if statusLineRE == nil {
+		statusLineRE = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[([U_]+)\]`)
+	}
 
 	sizeStr := strings.Fields(statusLine)[0]
 	size, err = strconv.ParseInt(sizeStr, 10, 64)
@@ -203,6 +206,19 @@ func evalStatusLine(deviceLine, statusLine string) (active, total, down, size in
 }
 
 func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, finish float64, speed float64, err error) {
+	if recoveryLineBlocksRE == nil {
+		recoveryLineBlocksRE = regexp.MustCompile(`\((\d+)/\d+\)`)
+	}
+	if recoveryLinePctRE == nil {
+		recoveryLinePctRE = regexp.MustCompile(`= (.+)%`)
+	}
+	if recoveryLineFinishRE == nil {
+		recoveryLineFinishRE = regexp.MustCompile(`finish=(.+)min`)
+	}
+	if recoveryLineSpeedRE == nil {
+		recoveryLineSpeedRE = regexp.MustCompile(`speed=(.+)[A-Z]`)
+	}
+
 	matches := recoveryLineBlocksRE.FindStringSubmatch(recoveryLine)
 	if len(matches) != 2 {
 		return 0, 0, 0, 0, fmt.Errorf("unexpected recoveryLine: %s", recoveryLine)
@@ -247,6 +263,9 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 }
 
 func evalComponentDevices(deviceFields []string) []string {
+	if componentDeviceRE == nil {
+		componentDeviceRE = regexp.MustCompile(`(.*)\[\d+\]`)
+	}
 	mdComponentDevices := make([]string, 0)
 	if len(deviceFields) > 3 {
 		for _, field := range deviceFields[4:] {

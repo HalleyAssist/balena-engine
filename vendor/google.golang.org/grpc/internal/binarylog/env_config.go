@@ -30,15 +30,15 @@ import (
 // to build a new logger and assign it to binarylog.Logger.
 //
 // Example filter config strings:
-//  - "" Nothing will be logged
-//  - "*" All headers and messages will be fully logged.
-//  - "*{h}" Only headers will be logged.
-//  - "*{m:256}" Only the first 256 bytes of each message will be logged.
-//  - "Foo/*" Logs every method in service Foo
-//  - "Foo/*,-Foo/Bar" Logs every method in service Foo except method /Foo/Bar
-//  - "Foo/*,Foo/Bar{m:256}" Logs the first 256 bytes of each message in method
-//    /Foo/Bar, logs all headers and messages in every other method in service
-//    Foo.
+//   - "" Nothing will be logged
+//   - "*" All headers and messages will be fully logged.
+//   - "*{h}" Only headers will be logged.
+//   - "*{m:256}" Only the first 256 bytes of each message will be logged.
+//   - "Foo/*" Logs every method in service Foo
+//   - "Foo/*,-Foo/Bar" Logs every method in service Foo except method /Foo/Bar
+//   - "Foo/*,Foo/Bar{m:256}" Logs the first 256 bytes of each message in method
+//     /Foo/Bar, logs all headers and messages in every other method in service
+//     Foo.
 //
 // If two configs exist for one certain method or service, the one specified
 // later overrides the previous config.
@@ -119,24 +119,48 @@ const (
 	// TODO: this const is only used by env_config now. But could be useful for
 	// other config. Move to binarylog.go if necessary.
 	maxUInt = ^uint64(0)
+)
 
-	// For "p.s/m" plus any suffix. Suffix will be parsed again. See test for
-	// expected output.
-	longMethodConfigRegexpStr = `^([\w./]+)/((?:\w+)|[*])(.+)?$`
-
-	// For suffix from above, "{h:123,m:123}". See test for expected output.
+var (
+	longMethodConfigRegexpStr    = `^([\w./]+)/((?:\w+)|[*])(.+)?$`
 	optionalLengthRegexpStr      = `(?::(\d+))?` // Optional ":123".
 	headerConfigRegexpStr        = `^{h` + optionalLengthRegexpStr + `}$`
 	messageConfigRegexpStr       = `^{m` + optionalLengthRegexpStr + `}$`
 	headerMessageConfigRegexpStr = `^{h` + optionalLengthRegexpStr + `;m` + optionalLengthRegexpStr + `}$`
+
+	longMethodConfigRegexp    *regexp.Regexp
+	headerConfigRegexp        *regexp.Regexp
+	messageConfigRegexp       *regexp.Regexp
+	headerMessageConfigRegexp *regexp.Regexp
 )
 
-var (
-	longMethodConfigRegexp    = regexp.MustCompile(longMethodConfigRegexpStr)
-	headerConfigRegexp        = regexp.MustCompile(headerConfigRegexpStr)
-	messageConfigRegexp       = regexp.MustCompile(messageConfigRegexpStr)
-	headerMessageConfigRegexp = regexp.MustCompile(headerMessageConfigRegexpStr)
-)
+func getLongMethodConfigRegexp() *regexp.Regexp {
+	if longMethodConfigRegexp == nil {
+		longMethodConfigRegexp = regexp.MustCompile(longMethodConfigRegexpStr)
+	}
+	return longMethodConfigRegexp
+}
+
+func getHeaderConfigRegexp() *regexp.Regexp {
+	if headerConfigRegexp == nil {
+		headerConfigRegexp = regexp.MustCompile(headerConfigRegexpStr)
+	}
+	return headerConfigRegexp
+}
+
+func getMessageConfigRegexp() *regexp.Regexp {
+	if messageConfigRegexp == nil {
+		messageConfigRegexp = regexp.MustCompile(messageConfigRegexpStr)
+	}
+	return messageConfigRegexp
+}
+
+func getHeaderMessageConfigRegexp() *regexp.Regexp {
+	if headerMessageConfigRegexp == nil {
+		headerMessageConfigRegexp = regexp.MustCompile(headerMessageConfigRegexpStr)
+	}
+	return headerMessageConfigRegexp
+}
 
 // Turn "service/method{h;m}" into "service", "method", "{h;m}".
 func parseMethodConfigAndSuffix(c string) (service, method, suffix string, _ error) {
@@ -144,7 +168,7 @@ func parseMethodConfigAndSuffix(c string) (service, method, suffix string, _ err
 	//
 	// in:  "p.s/m{h:123,m:123}",
 	// out: []string{"p.s/m{h:123,m:123}", "p.s", "m", "{h:123,m:123}"},
-	match := longMethodConfigRegexp.FindStringSubmatch(c)
+	match := getLongMethodConfigRegexp().FindStringSubmatch(c)
 	if match == nil {
 		return "", "", "", fmt.Errorf("%q contains invalid substring", c)
 	}
@@ -162,7 +186,7 @@ func parseHeaderMessageLengthConfig(c string) (hdrLenStr, msgLenStr uint64, err 
 		return maxUInt, maxUInt, nil
 	}
 	// Header config only.
-	if match := headerConfigRegexp.FindStringSubmatch(c); match != nil {
+	if match := getHeaderConfigRegexp().FindStringSubmatch(c); match != nil {
 		if s := match[1]; s != "" {
 			hdrLenStr, err = strconv.ParseUint(s, 10, 64)
 			if err != nil {
@@ -174,7 +198,7 @@ func parseHeaderMessageLengthConfig(c string) (hdrLenStr, msgLenStr uint64, err 
 	}
 
 	// Message config only.
-	if match := messageConfigRegexp.FindStringSubmatch(c); match != nil {
+	if match := getMessageConfigRegexp().FindStringSubmatch(c); match != nil {
 		if s := match[1]; s != "" {
 			msgLenStr, err = strconv.ParseUint(s, 10, 64)
 			if err != nil {
@@ -186,7 +210,7 @@ func parseHeaderMessageLengthConfig(c string) (hdrLenStr, msgLenStr uint64, err 
 	}
 
 	// Header and message config both.
-	if match := headerMessageConfigRegexp.FindStringSubmatch(c); match != nil {
+	if match := getHeaderMessageConfigRegexp().FindStringSubmatch(c); match != nil {
 		// Both hdr and msg are specified, but one or two of them might be empty.
 		hdrLenStr = maxUInt
 		msgLenStr = maxUInt

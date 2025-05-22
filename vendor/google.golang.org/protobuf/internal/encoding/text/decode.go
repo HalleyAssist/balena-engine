@@ -421,7 +421,7 @@ func (d *Decoder) parseFieldName() (tok Token, err error) {
 		return Token{}, d.newSyntaxError("invalid field number: %s", d.in[:num.size])
 	}
 
-	return Token{}, d.newSyntaxError("invalid field name: %s", errRegexp.Find(d.in))
+	return Token{}, d.newSyntaxError("invalid field name: %s", getErrRegexp().Find(d.in))
 }
 
 // parseTypeName parses Any type URL or extension field name. The name is
@@ -571,7 +571,7 @@ func (d *Decoder) parseScalar() (Token, error) {
 		return tok, nil
 	}
 
-	return Token{}, d.newSyntaxError("invalid scalar value: %s", errRegexp.Find(d.in))
+	return Token{}, d.newSyntaxError("invalid scalar value: %s", getErrRegexp().Find(d.in))
 }
 
 // parseLiteralValue parses a literal value. A literal value is used for
@@ -654,7 +654,14 @@ func consume(b []byte, n int) []byte {
 }
 
 // Any sequence that looks like a non-delimiter (for error reporting).
-var errRegexp = regexp.MustCompile(`^([-+._a-zA-Z0-9\/]+|.)`)
+var errRegexp *regexp.Regexp
+
+func getErrRegexp() *regexp.Regexp {
+	if errRegexp == nil {
+		errRegexp = regexp.MustCompile(`^([-+._a-zA-Z0-9\/]+|.)`)
+	}
+	return errRegexp
+}
 
 // isDelim returns true if given byte is a delimiter character.
 func isDelim(c byte) bool {

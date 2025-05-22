@@ -28,9 +28,23 @@ const (
 )
 
 var (
-	reBackslashOrAmp      = regexp.MustCompile("[\\&]")
-	reEntityOrEscapedChar = regexp.MustCompile("(?i)\\\\" + escapable + "|" + charEntity)
+	reBackslashOrAmp      *regexp.Regexp
+	reEntityOrEscapedChar *regexp.Regexp
 )
+
+func getReBackslashOrAmp() *regexp.Regexp {
+	if reBackslashOrAmp == nil {
+		reBackslashOrAmp = regexp.MustCompile("[\\&]")
+	}
+	return reBackslashOrAmp
+}
+
+func getReEntityOrEscapedChar() *regexp.Regexp {
+	if reEntityOrEscapedChar == nil {
+		reEntityOrEscapedChar = regexp.MustCompile("(?i)\\" + escapable + "|" + charEntity)
+	}
+	return reEntityOrEscapedChar
+}
 
 // Parse block-level data.
 // Note: this function and many that it calls assume that
@@ -720,8 +734,8 @@ func unescapeChar(str []byte) []byte {
 }
 
 func unescapeString(str []byte) []byte {
-	if reBackslashOrAmp.Match(str) {
-		return reEntityOrEscapedChar.ReplaceAllFunc(str, unescapeChar)
+	if getReBackslashOrAmp().Match(str) {
+		return getReEntityOrEscapedChar().ReplaceAllFunc(str, unescapeChar)
 	}
 	return str
 }

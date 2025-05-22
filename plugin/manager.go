@@ -32,7 +32,14 @@ import (
 const configFileName = "config.json"
 const rootFSFileName = "rootfs"
 
-var validFullID = regexp.MustCompile(`^([a-f0-9]{64})$`)
+var validFullID *regexp.Regexp
+
+func getValidFullID() *regexp.Regexp {
+	if validFullID == nil {
+		validFullID = regexp.MustCompile(`^([a-f0-9]{64})$`)
+	}
+	return validFullID
+}
 
 // Executor is the interface that the plugin manager uses to interact with for starting/stopping plugins
 type Executor interface {
@@ -184,7 +191,7 @@ func (pm *Manager) reload() error { // todo: restore
 	}
 	plugins := make(map[string]*v2.Plugin)
 	for _, v := range dir {
-		if validFullID.MatchString(v.Name()) {
+		if getValidFullID().MatchString(v.Name()) {
 			p, err := pm.loadPlugin(v.Name())
 			if err != nil {
 				handleLoadError(err, v.Name())
@@ -192,7 +199,7 @@ func (pm *Manager) reload() error { // todo: restore
 			}
 			plugins[p.GetID()] = p
 		} else {
-			if validFullID.MatchString(strings.TrimSuffix(v.Name(), "-removing")) {
+			if getValidFullID().MatchString(strings.TrimSuffix(v.Name(), "-removing")) {
 				// There was likely some error while removing this plugin, let's try to remove again here
 				if err := system.EnsureRemoveAll(v.Name()); err != nil {
 					logrus.WithError(err).WithField("id", v.Name()).Warn("error while attempting to clean up previously removed plugin")

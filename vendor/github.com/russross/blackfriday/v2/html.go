@@ -50,7 +50,7 @@ const (
 )
 
 var (
-	htmlTagRe = regexp.MustCompile("(?i)^" + htmlTag)
+	htmlTagRe *regexp.Regexp
 )
 
 const (
@@ -384,6 +384,10 @@ func cellAlignment(align CellAlignFlags) string {
 
 func (r *HTMLRenderer) out(w io.Writer, text []byte) {
 	if r.disableTags > 0 {
+		if htmlTagRe == nil {
+			htmlTagRe = regexp.MustCompile("(?i)^" + htmlTag)
+		}
+
 		w.Write(htmlTagRe.ReplaceAll(text, []byte{}))
 	} else {
 		w.Write(text)

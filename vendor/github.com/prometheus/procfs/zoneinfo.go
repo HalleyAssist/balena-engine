@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !windows
 // +build !windows
 
 package procfs
@@ -66,7 +67,14 @@ type Zoneinfo struct {
 	Protection                 []*int64
 }
 
-var nodeZoneRE = regexp.MustCompile(`(\d+), zone\s+(\w+)`)
+var nodeZoneRE *regexp.Regexp
+
+func getNodeZoneRE() *regexp.Regexp {
+	if nodeZoneRE == nil {
+		nodeZoneRE = regexp.MustCompile(`(\d+), zone\s+(\w+)`)
+	}
+	return nodeZoneRE
+}
 
 // Zoneinfo parses an zoneinfo-file (/proc/zoneinfo) and returns a slice of
 // structs containing the relevant info.  More information available here:
@@ -93,7 +101,7 @@ func parseZoneinfo(zoneinfoData []byte) ([]Zoneinfo, error) {
 		lines := strings.Split(string(block), "\n")
 		for _, line := range lines {
 
-			if nodeZone := nodeZoneRE.FindStringSubmatch(line); nodeZone != nil {
+			if nodeZone := getNodeZoneRE().FindStringSubmatch(line); nodeZone != nil {
 				zoneinfoElement.Node = nodeZone[1]
 				zoneinfoElement.Zone = nodeZone[2]
 				continue

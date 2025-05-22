@@ -91,7 +91,14 @@ const (
 // LabelNameRE is a regular expression matching valid label names. Note that the
 // IsValid method of LabelName performs the same check but faster than a match
 // with this regular expression.
-var LabelNameRE = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
+var LabelNameRE *regexp.Regexp
+
+func getLabelNameRE() *regexp.Regexp {
+	if LabelNameRE == nil {
+		LabelNameRE = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
+	}
+	return LabelNameRE
+}
 
 // A LabelName is a key for a LabelSet or Metric.  It has a value associated
 // therewith.

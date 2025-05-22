@@ -41,7 +41,14 @@ const (
 type TraceContext struct{}
 
 var _ TextMapPropagator = TraceContext{}
-var traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
+var traceCtxRegExp *regexp.Regexp
+
+func getTraceCtxRegExp() *regexp.Regexp {
+	if traceCtxRegExp == nil {
+		traceCtxRegExp = regexp.MustCompile("^(?P<version>[0-9a-f]{2})-(?P<traceID>[a-f0-9]{32})-(?P<spanID>[a-f0-9]{16})-(?P<traceFlags>[a-f0-9]{2})(?:-.*)?$")
+	}
+	return traceCtxRegExp
+}
 
 // Inject set tracecontext from the Context into the carrier.
 func (tc TraceContext) Inject(ctx context.Context, carrier TextMapCarrier) {
@@ -84,7 +91,7 @@ func (tc TraceContext) extract(carrier TextMapCarrier) trace.SpanContext {
 		return trace.SpanContext{}
 	}
 
-	matches := traceCtxRegExp.FindStringSubmatch(h)
+	matches := getTraceCtxRegExp().FindStringSubmatch(h)
 
 	if len(matches) == 0 {
 		return trace.SpanContext{}
