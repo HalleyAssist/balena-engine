@@ -477,16 +477,15 @@ func (m *Metric) GetLabels() map[string]string {
 	return nil
 }
 
-func init() {
+func Init() {
 	proto.RegisterEnum("google.api.MetricDescriptor_MetricKind", MetricDescriptor_MetricKind_name, MetricDescriptor_MetricKind_value)
 	proto.RegisterEnum("google.api.MetricDescriptor_ValueType", MetricDescriptor_ValueType_name, MetricDescriptor_ValueType_value)
 	proto.RegisterType((*MetricDescriptor)(nil), "google.api.MetricDescriptor")
 	proto.RegisterType((*MetricDescriptor_MetricDescriptorMetadata)(nil), "google.api.MetricDescriptor.MetricDescriptorMetadata")
 	proto.RegisterType((*Metric)(nil), "google.api.Metric")
 	proto.RegisterMapType((map[string]string)(nil), "google.api.Metric.LabelsEntry")
+	proto.RegisterFile("google/api/metric.proto", fileDescriptor_927eaac1a24f8abb)
 }
-
-func init() { proto.RegisterFile("google/api/metric.proto", fileDescriptor_927eaac1a24f8abb) }
 
 var fileDescriptor_927eaac1a24f8abb = []byte{
 	// 661 bytes of a gzipped FileDescriptorProto

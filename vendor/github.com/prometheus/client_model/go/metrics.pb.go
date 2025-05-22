@@ -659,7 +659,7 @@ func (m *MetricFamily) GetMetric() []*Metric {
 	return nil
 }
 
-func init() {
+func Init() {
 	proto.RegisterEnum("io.prometheus.client.MetricType", MetricType_name, MetricType_value)
 	proto.RegisterType((*LabelPair)(nil), "io.prometheus.client.LabelPair")
 	proto.RegisterType((*Gauge)(nil), "io.prometheus.client.Gauge")
@@ -672,9 +672,8 @@ func init() {
 	proto.RegisterType((*Exemplar)(nil), "io.prometheus.client.Exemplar")
 	proto.RegisterType((*Metric)(nil), "io.prometheus.client.Metric")
 	proto.RegisterType((*MetricFamily)(nil), "io.prometheus.client.MetricFamily")
+	proto.RegisterFile("metrics.proto", fileDescriptor_6039342a2ba47b72)
 }
-
-func init() { proto.RegisterFile("metrics.proto", fileDescriptor_6039342a2ba47b72) }
 
 var fileDescriptor_6039342a2ba47b72 = []byte{
 	// 665 bytes of a gzipped FileDescriptorProto
