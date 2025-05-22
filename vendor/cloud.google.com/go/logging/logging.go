@@ -127,10 +127,12 @@ type Client struct {
 
 // NewClient returns a new logging client associated with the provided parent.
 // A parent can take any of the following forms:
-//    projects/PROJECT_ID
-//    folders/FOLDER_ID
-//    billingAccounts/ACCOUNT_ID
-//    organizations/ORG_ID
+//
+//	projects/PROJECT_ID
+//	folders/FOLDER_ID
+//	billingAccounts/ACCOUNT_ID
+//	organizations/ORG_ID
+//
 // for backwards compatibility, a string with no '/' is also allowed and is interpreted
 // as a project ID.
 //
@@ -832,7 +834,14 @@ func (l *Logger) writeLogEntries(entries []*logpb.LogEntry) {
 // (for example by calling SetFlags or SetPrefix).
 func (l *Logger) StandardLogger(s Severity) *log.Logger { return l.stdLoggers[s] }
 
-var reCloudTraceContext = regexp.MustCompile(`([a-f\d]+)/([a-f\d]+);o=(\d)`)
+var reCloudTraceContext *regexp.Regexp
+
+func getReCloudTraceContext() *regexp.Regexp {
+	if reCloudTraceContext == nil {
+		reCloudTraceContext = regexp.MustCompile(`([a-f\d]+)/([a-f\d]+);o=(\d)`)
+	}
+	return reCloudTraceContext
+}
 
 func deconstructXCloudTraceContext(s string) (traceID, spanID string, traceSampled bool) {
 	// As per the format described at https://cloud.google.com/trace/docs/troubleshooting#force-trace
@@ -844,7 +853,7 @@ func deconstructXCloudTraceContext(s string) (traceID, spanID string, traceSampl
 	//   * traceID:         "105445aa7843bc8bf206b120001000"
 	//   * spanID:          ""
 	//   * traceSampled:    true
-	matches := reCloudTraceContext.FindAllStringSubmatch(s, -1)
+	matches := getReCloudTraceContext().FindAllStringSubmatch(s, -1)
 	if len(matches) != 1 {
 		return
 	}

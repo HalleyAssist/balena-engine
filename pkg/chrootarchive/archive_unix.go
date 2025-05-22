@@ -4,7 +4,6 @@
 package chrootarchive // import "github.com/docker/docker/pkg/chrootarchive"
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"io"
@@ -14,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/reexec"
 	"github.com/pkg/errors"
 )
 
@@ -84,34 +82,11 @@ func invokePack(srcPath string, options *archive.TarOptions, root string) (io.Re
 		relSrc += "/"
 	}
 
-	cmd := reexec.Command("docker-tar", relSrc, root)
-
-	errBuff := bytes.NewBuffer(nil)
-	cmd.Stderr = errBuff
-
-	tarR, tarW := io.Pipe()
-	cmd.Stdout = tarW
-
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting options pipe for tar process")
+	if root == "" {
+		root = relSrc
 	}
 
-	if err := cmd.Start(); err != nil {
-		return nil, errors.Wrap(err, "tar error on re-exec cmd")
-	}
+	rdr, err := archive.TarWithOptions(relSrc, options)
 
-	go func() {
-		err := cmd.Wait()
-		err = errors.Wrapf(err, "error processing tar file: %s", errBuff)
-		tarW.CloseWithError(err)
-	}()
-
-	if err := json.NewEncoder(stdin).Encode(options); err != nil {
-		stdin.Close()
-		return nil, errors.Wrap(err, "tar json encode to pipe failed")
-	}
-	stdin.Close()
-
-	return tarR, nil
+	return rdr, err
 }

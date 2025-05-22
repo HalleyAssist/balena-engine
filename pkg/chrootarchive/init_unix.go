@@ -8,15 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-
-	"github.com/docker/docker/pkg/reexec"
 )
-
-func init() {
-	reexec.Register("docker-applyLayer", applyLayer)
-	//reexec.Register("docker-untar", untar)
-	//reexec.Register("docker-tar", tar)
-}
 
 func fatal(err error) {
 	fmt.Fprint(os.Stderr, err)

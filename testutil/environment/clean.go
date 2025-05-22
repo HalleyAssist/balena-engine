@@ -54,7 +54,14 @@ func getPausedContainers(ctx context.Context, t testing.TB, client client.Contai
 	return containers
 }
 
-var alreadyExists = regexp.MustCompile(`Error response from daemon: removal of container (\w+) is already in progress`)
+var alreadyExists *regexp.Regexp
+
+func getAlreadyExists() *regexp.Regexp {
+	if alreadyExists == nil {
+		alreadyExists = regexp.MustCompile(`Error response from daemon: removal of container (\w+) is already in progress`)
+	}
+	return alreadyExists
+}
 
 func deleteAllContainers(t testing.TB, apiclient client.ContainerAPIClient, protectedContainers map[string]struct{}) {
 	t.Helper()
@@ -72,7 +79,7 @@ func deleteAllContainers(t testing.TB, apiclient client.ContainerAPIClient, prot
 			Force:         true,
 			RemoveVolumes: true,
 		})
-		if err == nil || client.IsErrNotFound(err) || alreadyExists.MatchString(err.Error()) || isErrNotFoundSwarmClassic(err) {
+		if err == nil || client.IsErrNotFound(err) || getAlreadyExists().MatchString(err.Error()) || isErrNotFoundSwarmClassic(err) {
 			continue
 		}
 		assert.Check(t, err, "failed to remove %s", container.ID)

@@ -90,11 +90,10 @@ func (m *Status) GetDetails() []*any.Any {
 	return nil
 }
 
-func init() {
+func Init() {
 	proto.RegisterType((*Status)(nil), "google.rpc.Status")
+	proto.RegisterFile("google/rpc/status.proto", fileDescriptor_24d244abaf643bfe)
 }
-
-func init() { proto.RegisterFile("google/rpc/status.proto", fileDescriptor_24d244abaf643bfe) }
 
 var fileDescriptor_24d244abaf643bfe = []byte{
 	// 212 bytes of a gzipped FileDescriptorProto

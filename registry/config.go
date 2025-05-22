@@ -61,7 +61,7 @@ var (
 
 func getValidHostPortRegex() *regexp.Regexp {
 	if validHostPortRegex == nil {
-		validHostPortRegex = regexp.MustCompile(`^` + reference.DomainRegexp.String() + `$`)
+		validHostPortRegex = regexp.MustCompile(reference.AnchoredDomainRegexp)
 	}
 	return validHostPortRegex
 }

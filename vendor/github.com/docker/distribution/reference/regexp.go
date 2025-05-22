@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-// DigestRegexp matches well-formed digests, including algorithm (e.g. "sha256:<encoded>").
-var DigestRegexp = regexp.MustCompile(digestPat)
-
 // DomainRegexp matches hostname or IP-addresses, optionally including a port
 // number. It defines the structure of potential domain components that may be
 // part of image names. This is purposely a subset of what is allowed by DNS to
@@ -17,16 +14,11 @@ var DigestRegexp = regexp.MustCompile(digestPat)
 // addresses such as IPv4-Mapped).
 //
 // [RFC 6874]: https://www.rfc-editor.org/rfc/rfc6874.
-var DomainRegexp = regexp.MustCompile(domainAndPort)
-
-// IdentifierRegexp is the format for string identifier used as a
-// content addressable identifier using sha256. These identifiers
-// are like digests without the algorithm, since sha256 is used.
-var IdentifierRegexp = regexp.MustCompile(identifier)
+var AnchoredDomainRegexp =  "^" + domainAndPort + "$"
 
 // NameRegexp is the format for the name component of references, including
 // an optional domain and port, but without tag or digest suffix.
-var NameRegexp = regexp.MustCompile(namePat)
+var NameRegexp = namePat
 
 // ReferenceRegexp is the full supported format of a reference. The regexp
 // is anchored and has capturing groups for name, tag, and digest
@@ -107,7 +99,7 @@ var (
 
 	// allowed by the URI Host subcomponent on rfc3986 to ensure backwards
 	// compatibility with Docker image names.
-	domainAndPort = host + optionalPort
+	domainAndPort =host + optionalPort
 
 	// anchoredTagRegexp matches valid tag names, anchored at the start and
 	// end of the matched string.

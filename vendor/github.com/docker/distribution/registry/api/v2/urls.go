@@ -85,7 +85,13 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		}
 	}
 
-	basePath := routeDescriptorsMap[RouteNameBase].Path
+	var basePath string
+	for _, route := range routeDescriptors {
+		if route.Name == RouteNameBase {
+			basePath = route.Path
+			break
+		}
+	}
 
 	requestPath := r.URL.Path
 	index := strings.Index(requestPath, basePath)
