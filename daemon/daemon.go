@@ -771,7 +771,7 @@ func NewDaemon(ctx context.Context, config *config.Config, pluginStore *plugin.S
 	}
 
 	// Do we have a disabled network?
-	config.DisableBridge = isBridgeNetworkDisabled(config)
+	config.DisableBridge = true
 
 	// Setup the resolv.conf
 	setupResolvConf(config)
@@ -1486,10 +1486,6 @@ func (daemon *Daemon) initDiscovery(conf *config.Config) error {
 
 	daemon.discoveryWatcher = discoveryWatcher
 	return nil
-}
-
-func isBridgeNetworkDisabled(conf *config.Config) bool {
-	return conf.BridgeConfig.Iface == config.DisableNetworkBridge
 }
 
 func (daemon *Daemon) networkOptions(dconfig *config.Config, pg plugingetter.PluginGetter, activeSandboxes map[string]interface{}) ([]nwconfig.Option, error) {
