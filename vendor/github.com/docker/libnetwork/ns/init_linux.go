@@ -75,12 +75,7 @@ func NlHandle() *netlink.Handle {
 
 func getSupportedNlFamilies() []int {
 	fams := []int{syscall.NETLINK_ROUTE}
-	// NETLINK_XFRM test
-	if err := checkXfrmSocket(); err != nil {
-		logrus.Warnf("Could not load necessary modules for IPSEC rules: %v", err)
-	} else {
-		fams = append(fams, syscall.NETLINK_XFRM)
-	}
+
 	// NETLINK_NETFILTER test
 	if err := loadNfConntrackModules(); err != nil {
 		if checkNfSocket() != nil {
@@ -93,16 +88,6 @@ func getSupportedNlFamilies() []int {
 	}
 
 	return fams
-}
-
-// API check on required xfrm modules (xfrm_user, xfrm_algo)
-func checkXfrmSocket() error {
-	fd, err := syscall.Socket(syscall.AF_NETLINK, syscall.SOCK_RAW, syscall.NETLINK_XFRM)
-	if err != nil {
-		return err
-	}
-	syscall.Close(fd)
-	return nil
 }
 
 func loadNfConntrackModules() error {
