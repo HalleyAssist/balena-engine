@@ -924,6 +924,8 @@ func Unpack(decompressedArchive io.Reader, dest string, options *TarOptions) err
 		return err
 	}
 
+	reverseDirection := ".." + string(os.PathSeparator)
+
 	// Iterate through the files in the archive.
 loop:
 	for {
@@ -956,7 +958,7 @@ loop:
 		// After calling filepath.Clean(hdr.Name) above, hdr.Name will now be in
 		// the filepath format for the OS on which the daemon is running. Hence
 		// the check for a slash-suffix MUST be done in an OS-agnostic way.
-		if !strings.HasSuffix(hdr.Name, string(os.PathSeparator)) {
+		if len(hdr.Name) >= 1 && hdr.Name[len(hdr.Name)-1] == os.PathSeparator {
 			// Not the root directory, ensure that the parent directory exists
 			parent := filepath.Dir(hdr.Name)
 			parentPath := filepath.Join(dest, parent)
@@ -973,7 +975,7 @@ loop:
 		if err != nil {
 			return err
 		}
-		if strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		if strings.HasPrefix(rel, reverseDirection) {
 			return breakoutError(fmt.Errorf("%q is outside of %q", hdr.Name, dest))
 		}
 
