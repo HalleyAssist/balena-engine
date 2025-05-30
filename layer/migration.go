@@ -1,10 +1,11 @@
 package layer // import "github.com/docker/docker/layer"
 
 import (
-	"compress/gzip"
 	"errors"
 	"io"
 	"os"
+
+	"github.com/klauspost/compress/gzip"
 
 	digest "github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"

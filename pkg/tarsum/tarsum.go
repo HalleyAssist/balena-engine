@@ -20,7 +20,6 @@ package tarsum // import "github.com/docker/docker/pkg/tarsum"
 import (
 	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"crypto"
 	"crypto/sha256"
 	"encoding/hex"
@@ -30,6 +29,8 @@ import (
 	"io"
 	"path"
 	"strings"
+
+	"github.com/klauspost/compress/gzip"
 )
 
 const (

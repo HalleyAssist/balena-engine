@@ -2,10 +2,11 @@ package distribution // import "github.com/docker/docker/distribution"
 
 import (
 	"bufio"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/docker/distribution/reference"
 	"github.com/docker/docker/distribution/metadata"

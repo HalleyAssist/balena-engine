@@ -1,7 +1,6 @@
 package layer // import "github.com/docker/docker/layer"
 
 import (
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +10,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/docker/distribution"
 	"github.com/docker/docker/pkg/ioutils"

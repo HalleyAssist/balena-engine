@@ -1,7 +1,6 @@
 package loggerutils // import "github.com/docker/docker/daemon/logger/loggerutils"
 
 import (
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/docker/docker/daemon/logger"
 	"github.com/docker/docker/pkg/filenotify"

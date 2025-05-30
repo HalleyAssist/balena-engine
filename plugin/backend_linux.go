@@ -3,7 +3,6 @@ package plugin // import "github.com/docker/docker/plugin"
 import (
 	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"io"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/containerd/containerd/content"
 	"github.com/containerd/containerd/images"

@@ -1,14 +1,15 @@
 package container // import "github.com/docker/docker/api/server/router/container"
 
 import (
-	"compress/flate"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
+
+	"github.com/klauspost/compress/flate"
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/docker/docker/api/server/httputils"
 	"github.com/docker/docker/api/types"
