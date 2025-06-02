@@ -30,7 +30,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/opencontainers/go-digest"
 	d "github.com/opencontainers/go-digest"
 )
 
@@ -437,7 +436,11 @@ func (r repository) Path() string {
 type digestReference d.Digest
 
 func (d digestReference) String() string {
-	return d.Digest().String()
+	return digest.Digest(d).String()
+}
+
+func (d digestReference) Digest() d.Digest {
+	return digest.Digest(d)
 }
 
 type taggedReference struct {
