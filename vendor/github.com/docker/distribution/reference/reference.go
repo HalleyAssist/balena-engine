@@ -437,11 +437,7 @@ func (r repository) Path() string {
 type digestReference d.Digest
 
 func (d digestReference) String() string {
-	return Digest().String()
-}
-
-func (d digestReference) Digest() d.Digest {
-	return d.Digest()
+	return d.Digest().String()
 }
 
 type taggedReference struct {
