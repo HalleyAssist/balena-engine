@@ -30,7 +30,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/opencontainers/go-digest"
+	d "github.com/opencontainers/go-digest"
 )
 
 const (
@@ -332,7 +332,7 @@ func WithTag(name Named, tag string) (NamedTagged, error) {
 // WithDigest combines the name from "name" and the digest from "digest" to form
 // a reference incorporating both the name and the digest.
 func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
-	if !digest.DigestRegexpAnchored.MatchString(digest.String()) {
+	if !d.DigestRegexpAnchored.MatchString(digest.String()) {
 		return nil, ErrDigestInvalidFormat
 	}
 	var repo repository
