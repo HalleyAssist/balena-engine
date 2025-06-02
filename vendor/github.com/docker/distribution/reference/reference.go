@@ -30,7 +30,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/opencontainers/go-digest"
+	d "github.com/opencontainers/go-digest"
 )
 
 const (
@@ -164,14 +164,14 @@ type NamedTagged interface {
 // in which it can be referenced by
 type Digested interface {
 	Reference
-	Digest() digest.Digest
+	Digest() d.Digest
 }
 
 // Canonical reference is an object with a fully unique
 // name including a name with domain and digest
 type Canonical interface {
 	Named
-	Digest() digest.Digest
+	Digest() d.Digest
 }
 
 // namedRepository is a reference to a repository with a name.
@@ -256,7 +256,7 @@ func Parse(s string) (Reference, error) {
 	}
 	if matches[3] != "" {
 		var err error
-		ref.digest, err = digest.Parse(matches[3])
+		ref.digest, err = d.Parse(matches[3])
 		if err != nil {
 			return nil, err
 		}
@@ -331,8 +331,8 @@ func WithTag(name Named, tag string) (NamedTagged, error) {
 
 // WithDigest combines the name from "name" and the digest from "digest" to form
 // a reference incorporating both the name and the digest.
-func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
-	if !digest.DigestRegexpAnchored.MatchString(digest.String()) {
+func WithDigest(name Named, digest d.Digest) (Canonical, error) {
+	if !d.DigestRegexpAnchored.MatchString(digest.String()) {
 		return nil, ErrDigestInvalidFormat
 	}
 	var repo repository
@@ -394,7 +394,7 @@ func getBestReferenceType(ref reference) Reference {
 type reference struct {
 	namedRepository
 	tag    string
-	digest digest.Digest
+	digest d.Digest
 }
 
 func (r reference) String() string {
@@ -405,7 +405,7 @@ func (r reference) Tag() string {
 	return r.tag
 }
 
-func (r reference) Digest() digest.Digest {
+func (r reference) Digest() d.Digest {
 	return r.digest
 }
 
@@ -433,14 +433,14 @@ func (r repository) Path() string {
 	return r.path
 }
 
-type digestReference digest.Digest
+type digestReference d.Digest
 
-func (d digestReference) String() string {
-	return digest.Digest(d).String()
+func (dr digestReference) String() string {
+	return d.Digest(dr).String()
 }
 
-func (d digestReference) Digest() digest.Digest {
-	return digest.Digest(d)
+func (dr digestReference) Digest() d.Digest {
+	return d.Digest(dr)
 }
 
 type taggedReference struct {
@@ -458,13 +458,13 @@ func (t taggedReference) Tag() string {
 
 type canonicalReference struct {
 	namedRepository
-	digest digest.Digest
+	digest d.Digest
 }
 
 func (c canonicalReference) String() string {
 	return c.Name() + "@" + c.digest.String()
 }
 
-func (c canonicalReference) Digest() digest.Digest {
+func (c canonicalReference) Digest() d.Digest {
 	return c.digest
 }
