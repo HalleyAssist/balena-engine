@@ -52,14 +52,6 @@ var (
 		SHA384: crypto.SHA384,
 		SHA512: crypto.SHA512,
 	}
-
-	// anchoredEncodedRegexps contains anchored regular expressions for hex-encoded digests.
-	// Note that /A-F/ disallowed.
-	anchoredEncodedRegexps = map[Algorithm]*regexp.Regexp{
-		SHA256: regexp.MustCompile(`^[a-f0-9]{64}$`),
-		SHA384: regexp.MustCompile(`^[a-f0-9]{96}$`),
-		SHA512: regexp.MustCompile(`^[a-f0-9]{128}$`),
-	}
 )
 
 // Available returns true if the digest type is available for use. If this
@@ -177,17 +169,27 @@ func (a Algorithm) FromString(s string) Digest {
 
 // Validate validates the encoded portion string
 func (a Algorithm) Validate(encoded string) error {
-	r, ok := anchoredEncodedRegexps[a]
-	if !ok {
-		return ErrDigestUnsupported
-	}
 	// Digests much always be hex-encoded, ensuring that their hex portion will
 	// always be size*2
 	if a.Size()*2 != len(encoded) {
 		return ErrDigestInvalidLength
 	}
+
+	var r *regexp.Regexp
+	switch a {
+	case SHA256:
+		r = regexp.MustCompile(`^[a-f0-9]{64}$`)
+	case SHA384:
+		r = regexp.MustCompile(`^[a-f0-9]{96}$`)
+	case SHA512:
+		r = regexp.MustCompile(`^[a-f0-9]{128}$`)
+	default:
+		return ErrDigestUnsupported
+	}
+
 	if r.MatchString(encoded) {
 		return nil
 	}
+
 	return ErrDigestInvalidFormat
 }
