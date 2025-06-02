@@ -256,7 +256,7 @@ func Parse(s string) (Reference, error) {
 	}
 	if matches[3] != "" {
 		var err error
-		ref.digest, err = digest.Parse(matches[3])
+		ref.digest, err = d.Parse(matches[3])
 		if err != nil {
 			return nil, err
 		}
@@ -435,12 +435,12 @@ func (r repository) Path() string {
 
 type digestReference d.Digest
 
-func (d digestReference) String() string {
-	return digest.Digest(d).String()
+func (dr digestReference) String() string {
+	return d.Digest(dr).String()
 }
 
-func (d digestReference) Digest() d.Digest {
-	return digest.Digest(d)
+func (dr digestReference) Digest() d.Digest {
+	return d.Digest(dr)
 }
 
 type taggedReference struct {
