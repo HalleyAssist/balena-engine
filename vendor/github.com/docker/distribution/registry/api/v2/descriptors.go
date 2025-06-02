@@ -421,7 +421,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:   RouteNameManifest,
-		Path:   "/v2/{name:" + reference.NameRegexp + "}/manifests/{reference:" + reference.TagRegexp.String() + "|" + digest.DigestRegexp.String() + "}",
+		Path:   "/v2/{name:" + reference.NameRegexp + "}/manifests/{reference:" + reference.TagRegexp + "|" + digest.DigestRegexp.String() + "}",
 		Entity: "Manifest",
 
 		Methods: []MethodDescriptor{

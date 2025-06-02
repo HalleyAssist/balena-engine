@@ -27,7 +27,7 @@ var ReferenceRegexp = regexp.MustCompile(referencePat)
 // TagRegexp matches valid tag names. From [docker/docker:graph/tags.go].
 //
 // [docker/docker:graph/tags.go]: https://github.com/moby/moby/blob/v1.6.0/graph/tags.go#L26-L28
-var TagRegexp = regexp.MustCompile(tag)
+var TagRegexp = tag
 
 const (
 	// alphanumeric defines the alphanumeric atom, typically a
