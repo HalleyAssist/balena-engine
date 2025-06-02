@@ -27,6 +27,7 @@ package reference
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/opencontainers/go-digest"
@@ -59,6 +60,42 @@ var (
 	// ErrNameNotCanonical is returned when a name is not canonical.
 	ErrNameNotCanonical = errors.New("repository name must be canonical")
 )
+
+var (
+	anchoredTagRegexp        *regexp.Regexp
+	anchoredDigestRegexp     *regexp.Regexp
+	anchoredNameRegexp       *regexp.Regexp
+	anchoredIdentifierRegexp *regexp.Regexp
+	referenceRegexp          *regexp.Regexp
+)
+
+func getAnchoredTagRegexp() *regexp.Regexp {
+	if anchoredTagRegexp == nil {
+		anchoredTagRegexp = regexp.MustCompile(anchoredTag)
+	}
+	return anchoredTagRegexp
+}
+
+func getAnchoredNameRegexp() *regexp.Regexp {
+	if anchoredNameRegexp == nil {
+		anchoredNameRegexp = regexp.MustCompile(anchoredName)
+	}
+	return anchoredNameRegexp
+}
+
+func getAnchoredIdentifierRegexp() *regexp.Regexp {
+	if anchoredIdentifierRegexp == nil {
+		anchoredIdentifierRegexp = regexp.MustCompile(anchoredIdentifier)
+	}
+	return anchoredIdentifierRegexp
+}
+
+func getReferenceRegexp() *regexp.Regexp {
+	if referenceRegexp == nil {
+		referenceRegexp = regexp.MustCompile(referencePat)
+	}
+	return referenceRegexp
+}
 
 // Reference is an opaque object reference identifier that may include
 // modifiers such as a hostname, name, tag, and digest.
@@ -164,7 +201,7 @@ func Path(named Named) (name string) {
 }
 
 func splitDomain(name string) (string, string) {
-	match := anchoredNameRegexp.FindStringSubmatch(name)
+	match := getAnchoredNameRegexp().FindStringSubmatch(name)
 	if len(match) != 3 {
 		return "", name
 	}
@@ -187,12 +224,12 @@ func SplitHostname(named Named) (string, string) {
 // If an error was encountered it is returned, along with a nil Reference.
 // NOTE: Parse will not handle short digests.
 func Parse(s string) (Reference, error) {
-	matches := ReferenceRegexp.FindStringSubmatch(s)
+	matches := getReferenceRegexp().FindStringSubmatch(s)
 	if matches == nil {
 		if s == "" {
 			return nil, ErrNameEmpty
 		}
-		if ReferenceRegexp.FindStringSubmatch(strings.ToLower(s)) != nil {
+		if getReferenceRegexp().FindStringSubmatch(strings.ToLower(s)) != nil {
 			return nil, ErrNameContainsUppercase
 		}
 		return nil, ErrReferenceInvalidFormat
@@ -204,7 +241,7 @@ func Parse(s string) (Reference, error) {
 
 	var repo repository
 
-	nameMatch := anchoredNameRegexp.FindStringSubmatch(matches[1])
+	nameMatch := getAnchoredNameRegexp().FindStringSubmatch(matches[1])
 	if len(nameMatch) == 3 {
 		repo.domain = nameMatch[1]
 		repo.path = nameMatch[2]
@@ -256,7 +293,7 @@ func WithName(name string) (Named, error) {
 		return nil, ErrNameTooLong
 	}
 
-	match := anchoredNameRegexp.FindStringSubmatch(name)
+	match := getAnchoredNameRegexp().FindStringSubmatch(name)
 	if match == nil || len(match) != 3 {
 		return nil, ErrReferenceInvalidFormat
 	}
@@ -269,7 +306,7 @@ func WithName(name string) (Named, error) {
 // WithTag combines the name from "name" and the tag from "tag" to form a
 // reference incorporating both the name and the tag.
 func WithTag(name Named, tag string) (NamedTagged, error) {
-	if !anchoredTagRegexp.MatchString(tag) {
+	if !getAnchoredTagRegexp().MatchString(tag) {
 		return nil, ErrTagInvalidFormat
 	}
 	var repo repository
@@ -295,7 +332,7 @@ func WithTag(name Named, tag string) (NamedTagged, error) {
 // WithDigest combines the name from "name" and the digest from "digest" to form
 // a reference incorporating both the name and the digest.
 func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
-	if !anchoredDigestRegexp.MatchString(digest.String()) {
+	if !digest.DigestRegexpAnchored.MatchString(digest.String()) {
 		return nil, ErrDigestInvalidFormat
 	}
 	var repo repository

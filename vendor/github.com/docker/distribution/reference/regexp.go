@@ -1,9 +1,5 @@
 package reference
 
-import (
-	"regexp"
-)
-
 // DomainRegexp matches hostname or IP-addresses, optionally including a port
 // number. It defines the structure of potential domain components that may be
 // part of image names. This is purposely a subset of what is allowed by DNS to
@@ -18,11 +14,6 @@ var AnchoredDomainRegexp = "^" + domainAndPort + "$"
 // NameRegexp is the format for the name component of references, including
 // an optional domain and port, but without tag or digest suffix.
 var NameRegexp = namePat
-
-// ReferenceRegexp is the full supported format of a reference. The regexp
-// is anchored and has capturing groups for name, tag, and digest
-// components.
-var ReferenceRegexp = regexp.MustCompile(referencePat)
 
 // TagRegexp matches valid tag names. From [docker/docker:graph/tags.go].
 //
@@ -71,7 +62,6 @@ const (
 	//
 	// [rfc4648, section 5]: https://www.rfc-editor.org/rfc/rfc4648#section-5.
 	digestPat         = `[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*[:][[:xdigit:]]{32,}`
-	anchoredDigestPat = `^` + digestPat + `$`
 
 	// identifier is the format for a content addressable identifier using sha256.
 	// These identifiers are like digests without the algorithm, since sha256 is used.
@@ -110,29 +100,10 @@ const (
 	// or more forward slash (/) delimited path-components:
 	//
 	//	pathComponent[[/pathComponent] ...] // e.g., "library/ubuntu"
-	remoteName = pathComponent + "(" + `/` + pathComponent + ")*"
+	remoteName = pathComponent + `(?:/` + pathComponent + ")*"
 	namePat    = "(?:" + domainAndPort + `/` + ")?" + remoteName
 
 	anchoredName = "^(?:(" + domainAndPort + ")/(" + remoteName + "))?$"
 
 	referencePat = "^(" + namePat + ")(?:" + `:(` + tag + "))?(?:" + `@(` + digestPat + "))?$"
-)
-
-var (
-
-	// anchoredTagRegexp matches valid tag names, anchored at the start and
-	// end of the matched string.
-	anchoredTagRegexp = regexp.MustCompile(anchoredTag)
-
-	// anchoredDigestRegexp matches valid digests, anchored at the start and
-	// end of the matched string.
-	anchoredDigestRegexp = regexp.MustCompile(anchoredDigestPat)
-
-	// anchoredNameRegexp is used to parse a name value, capturing the
-	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchoredName)
-
-	// anchoredIdentifierRegexp is used to check or match an
-	// identifier value, anchored at start and end of string.
-	anchoredIdentifierRegexp = regexp.MustCompile(anchoredIdentifier)
 )
