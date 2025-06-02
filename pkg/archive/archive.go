@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -147,31 +146,8 @@ func xzDecompress(ctx context.Context, archive io.Reader) (io.ReadCloser, error)
 }
 
 func gzDecompress(ctx context.Context, buf io.Reader) (io.ReadCloser, error) {
-	noPigzEnv := os.Getenv("MOBY_DISABLE_PIGZ")
-	var noPigz bool
-
-	if noPigzEnv != "" {
-		var err error
-		noPigz, err = strconv.ParseBool(noPigzEnv)
-		if err != nil {
-			logrus.WithError(err).Warn("invalid value in MOBY_DISABLE_PIGZ env var")
-		}
-	}
-
-	if noPigz {
-		logrus.Debugf("Use of pigz is disabled due to MOBY_DISABLE_PIGZ=%s", noPigzEnv)
-		return gzip.NewReader(buf)
-	}
-
-	unpigzPath, err := exec.LookPath("unpigz")
-	if err != nil {
-		logrus.Debugf("unpigz binary not found, falling back to go gzip library")
-		return gzip.NewReader(buf)
-	}
-
-	logrus.Debugf("Using %s to decompress", unpigzPath)
-
-	return cmdStream(exec.CommandContext(ctx, unpigzPath, "-d", "-c"), buf)
+	println("gzDecompress")
+	return gzip.NewReader(buf)
 }
 
 func wrapReadCloser(readBuf io.ReadCloser, cancel context.CancelFunc) io.ReadCloser {
