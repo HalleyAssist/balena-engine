@@ -8,7 +8,6 @@ import (
 	gogotypes "github.com/gogo/protobuf/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/any"
-	"github.com/moby/buildkit/util/stack"
 	"github.com/sirupsen/logrus"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
@@ -43,10 +42,6 @@ func ToGRPC(err error) error {
 	}
 
 	var details []proto.Message
-
-	for _, st := range stack.Traces(err) {
-		details = append(details, st)
-	}
 
 	each(err, func(err error) {
 		if te, ok := err.(TypedError); ok {
@@ -150,7 +145,6 @@ func FromGRPC(err error) error {
 	}
 
 	details := make([]TypedErrorProto, 0, len(pb.Details))
-	stacks := make([]*stack.Stack, 0, len(pb.Details))
 
 	// details that we don't understand are copied as proto
 	for _, d := range pb.Details {
@@ -160,8 +154,6 @@ func FromGRPC(err error) error {
 		}
 
 		switch v := m.(type) {
-		case *stack.Stack:
-			stacks = append(stacks, v)
 		case TypedErrorProto:
 			details = append(details, v)
 		default:
@@ -171,21 +163,11 @@ func FromGRPC(err error) error {
 
 	err = status.FromProto(n).Err()
 
-	for _, s := range stacks {
-		if s != nil {
-			err = stack.Wrap(err, *s)
-		}
-	}
-
 	for _, d := range details {
 		err = d.WrapError(err)
 	}
 
-	if err != nil {
-		stack.Helper()
-	}
-
-	return stack.Enable(err)
+	return err
 }
 
 type withCode struct {
