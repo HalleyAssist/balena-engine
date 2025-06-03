@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/juju/ratelimit"
+
 	"github.com/balena-os/librsync-go"
 	"github.com/docker/distribution"
 	"github.com/docker/docker/image"
@@ -524,7 +526,13 @@ func DecorateWithDeltaPatcher(layerData io.ReadCloser, deltaBase io.ReadSeeker) 
 			pW.Close()
 		}()
 
-		return pR
+		bucket := ratelimit.NewBucketWithRate(1500*1024, 1500*1024)
+
+		reader := ratelimit.Reader(pR, bucket)
+
+		return ioutils.NewReadCloserWrapper(reader, func() error {
+			return pR.Close()
+		})
 	}
 	return layerData
 }
