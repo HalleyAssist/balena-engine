@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/DataDog/czlib"
+	"github.com/juju/ratelimit"
 	"github.com/klauspost/compress/gzip"
 
 	"github.com/docker/docker/pkg/fileutils"
@@ -172,6 +173,10 @@ func DecompressStream(archive io.Reader) (io.ReadCloser, error) {
 		return nil, err
 	}
 
+	bucket := ratelimit.NewBucketWithRate(800*1024, 800*1024)
+
+	bufRate := ratelimit.Reader(buf, bucket)
+
 	compression := DetectCompression(bs)
 	switch compression {
 	case Uncompressed:
@@ -180,7 +185,7 @@ func DecompressStream(archive io.Reader) (io.ReadCloser, error) {
 	case Gzip:
 		ctx, cancel := context.WithCancel(context.Background())
 
-		gzReader, err := gzDecompress(ctx, buf)
+		gzReader, err := gzDecompress(ctx, bufRate)
 		if err != nil {
 			cancel()
 			return nil, err
@@ -188,13 +193,13 @@ func DecompressStream(archive io.Reader) (io.ReadCloser, error) {
 		readBufWrapper := p.NewReadCloserWrapper(buf, gzReader)
 		return wrapReadCloser(readBufWrapper, cancel), nil
 	case Bzip2:
-		bz2Reader := bzip2.NewReader(buf)
+		bz2Reader := bzip2.NewReader(bufRate)
 		readBufWrapper := p.NewReadCloserWrapper(buf, bz2Reader)
 		return readBufWrapper, nil
 	case Xz:
 		ctx, cancel := context.WithCancel(context.Background())
 
-		xzReader, err := xzDecompress(ctx, buf)
+		xzReader, err := xzDecompress(ctx, bufRate)
 		if err != nil {
 			cancel()
 			return nil, err
