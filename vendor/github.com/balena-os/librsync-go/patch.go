@@ -44,6 +44,24 @@ func readParam(r io.Reader, size uint8) int64 {
 	return 0
 }
 
+// CopyN copies n bytes (or until an error) from src to dst.
+// It returns the number of bytes copied and the earliest
+// error encountered while copying.
+// On return, written == n if and only if err == nil.
+//
+// If dst implements [ReaderFrom], the copy is implemented using it.
+func CopyN(dst io.Writer, src io.Reader, n int64, buf []byte) (written int64, err error) {
+	written, err = io.CopyBuffer(dst, io.LimitReader(src, n), buf)
+	if written == n {
+		return n, nil
+	}
+	if written < n && err == nil {
+		// src stopped early; must have been EOF.
+		err = io.EOF
+	}
+	return
+}
+
 func Patch(base io.ReadSeeker, delta io.Reader, out io.Writer) error {
 	var magic MagicNumber
 
@@ -55,6 +73,8 @@ func Patch(base io.ReadSeeker, delta io.Reader, out io.Writer) error {
 	if magic != DELTA_MAGIC {
 		return fmt.Errorf("Got magic number %x rather than expected value %x", magic, DELTA_MAGIC)
 	}
+
+	buf := make([]byte, 32 * 1024) // Buffer for CopyN
 
 	for {
 		var op Op
@@ -77,10 +97,10 @@ func Patch(base io.ReadSeeker, delta io.Reader, out io.Writer) error {
 		default:
 			return fmt.Errorf("Bogus command %x", cmd.Kind)
 		case KIND_LITERAL:
-			io.CopyN(out, delta, param1)
+			CopyN(out, delta, param1, buf)
 		case KIND_COPY:
 			base.Seek(param1, io.SeekStart)
-			io.CopyN(out, base, param2)
+			CopyN(out, base, param2, buf)
 		case KIND_END:
 			return nil
 		}
