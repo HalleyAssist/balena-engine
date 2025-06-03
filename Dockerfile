@@ -128,7 +128,8 @@ RUN --mount=type=cache,sharing=locked,id=moby-cross-false-aptlib,target=/var/lib
             libdevmapper-dev \
             libseccomp-dev \
             libsystemd-dev \
-            libudev-dev
+            libudev-dev \
+            zlib1g-dev
 
 FROM --platform=linux/amd64 runtime-dev-cross-false AS runtime-dev-cross-true
 ARG DEBIAN_FRONTEND
@@ -289,7 +290,6 @@ RUN --mount=type=cache,sharing=locked,id=moby-dev-aptlib,target=/var/lib/apt \
             xfsprogs \
             xz-utils \
             zip
-
 
 # Switch to use iptables instead of nftables (to match the CI hosts)
 # TODO use some kind of runtime auto-detection instead if/when nftables is supported (https://github.com/moby/moby/issues/26824)

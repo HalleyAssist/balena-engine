@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DataDog/czlib"
 	"github.com/klauspost/compress/gzip"
 
 	"github.com/docker/docker/pkg/fileutils"
@@ -146,8 +147,7 @@ func xzDecompress(ctx context.Context, archive io.Reader) (io.ReadCloser, error)
 }
 
 func gzDecompress(ctx context.Context, buf io.Reader) (io.ReadCloser, error) {
-	println("gzDecompress")
-	return gzip.NewReader(buf)
+	return czlib.NewReader(buf)
 }
 
 func wrapReadCloser(readBuf io.ReadCloser, cancel context.CancelFunc) io.ReadCloser {
