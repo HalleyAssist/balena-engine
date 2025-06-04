@@ -114,7 +114,7 @@ if [ -z "$DOCKER_DEBUG" ]; then
 fi
 
 LDFLAGS_STATIC='-fPIC'
-EXTLDFLAGS_STATIC='-static -fPIC -Wl,--gc-sections'
+EXTLDFLAGS_STATIC='-static-libgo -fPIC -Wl,--gc-sections'
 
 # ORIG_BUILDFLAGS is necessary for the cross target which cannot always build
 # with options like -race.
