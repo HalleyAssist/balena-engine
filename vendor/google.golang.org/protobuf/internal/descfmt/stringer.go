@@ -207,9 +207,6 @@ type records struct {
 func (rs *records) Append(v reflect.Value, accessors ...string) {
 	for _, a := range accessors {
 		var rv reflect.Value
-		if m := v.MethodByName(a); m.IsValid() {
-			rv = m.Call(nil)[0]
-		}
 		if v.Kind() == reflect.Struct && !rv.IsValid() {
 			rv = v.FieldByName(a)
 		}

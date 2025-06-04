@@ -193,15 +193,6 @@ fieldLoop:
 
 	// Derive a mapping of oneof wrappers to fields.
 	oneofWrappers := mi.OneofWrappers
-	for _, method := range []string{"XXX_OneofFuncs", "XXX_OneofWrappers"} {
-		if fn, ok := reflect.PtrTo(t).MethodByName(method); ok {
-			for _, v := range fn.Func.Call([]reflect.Value{reflect.Zero(fn.Type.In(0))}) {
-				if vs, ok := v.Interface().([]interface{}); ok {
-					oneofWrappers = vs
-				}
-			}
-		}
-	}
 	for _, v := range oneofWrappers {
 		tf := reflect.TypeOf(v).Elem()
 		f := tf.Field(0)
