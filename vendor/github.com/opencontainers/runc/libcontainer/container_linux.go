@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -985,7 +986,43 @@ func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
 	return fmt.Errorf("Checkpointing is not supported in this release")
 }
 
+func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
+	return fmt.Errorf("Restoring is not supported in this release")
+}
+
 // netlinkError is an error wrapper type for use by custom netlink message
 // types. Panics with errors are wrapped in netlinkError so that the recover
 // in bootstrapData can distinguish intentional panics.
 type netlinkError struct{ error }
+
+// ignoreTerminateErrors returns nil if the given err matches an error known
+// to indicate that the terminate occurred successfully or err was nil, otherwise
+// err is returned unaltered.
+func ignoreTerminateErrors(err error) error {
+	if err == nil {
+		return nil
+	}
+	// terminate() might return an error from either Kill or Wait.
+	// The (*Cmd).Wait documentation says: "If the command fails to run
+	// or doesn't complete successfully, the error is of type *ExitError".
+	// Filter out such errors (like "exit status 1" or "signal: killed").
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return nil
+	}
+	if errors.Is(err, os.ErrProcessDone) {
+		return nil
+	}
+	s := err.Error()
+	if strings.Contains(s, "Wait was already called") {
+		return nil
+	}
+	return err
+}
+
+func requiresRootOrMappingTool(c *configs.Config) bool {
+	gidMap := []configs.IDMap{
+		{ContainerID: 0, HostID: int64(os.Getegid()), Size: 1},
+	}
+	return !reflect.DeepEqual(c.GidMappings, gidMap)
+}
