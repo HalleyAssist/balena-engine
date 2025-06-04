@@ -995,6 +995,129 @@ func (c *linuxContainer) Restore(process *Process, criuOpts *CriuOpts) error {
 // in bootstrapData can distinguish intentional panics.
 type netlinkError struct{ error }
 
+// bootstrapData encodes the necessary data in netlink binary format
+// as a io.Reader.
+// Consumer can write the data to a bootstrap program
+// such as one that uses nsenter package to bootstrap the container's
+// init process correctly, i.e. with correct namespaces, uid/gid
+// mapping etc.
+func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.NamespaceType]string, it initType) (_ io.Reader, Err error) {
+	// create the netlink message
+	r := nl.NewNetlinkRequest(int(InitMsg), 0)
+
+	// Our custom messages cannot bubble up an error using returns, instead
+	// they will panic with the specific error type, netlinkError. In that
+	// case, recover from the panic and return that as an error.
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(netlinkError); ok {
+				Err = e.error
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	// write cloneFlags
+	r.AddData(&Int32msg{
+		Type:  CloneFlagsAttr,
+		Value: uint32(cloneFlags),
+	})
+
+	// write custom namespace paths
+	if len(nsMaps) > 0 {
+		nsPaths, err := c.orderNamespacePaths(nsMaps)
+		if err != nil {
+			return nil, err
+		}
+		r.AddData(&Bytemsg{
+			Type:  NsPathsAttr,
+			Value: []byte(strings.Join(nsPaths, ",")),
+		})
+	}
+
+	// write namespace paths only when we are not joining an existing user ns
+	_, joinExistingUser := nsMaps[configs.NEWUSER]
+	if !joinExistingUser {
+		// write uid mappings
+		if len(c.config.UidMappings) > 0 {
+			if c.config.RootlessEUID && c.newuidmapPath != "" {
+				r.AddData(&Bytemsg{
+					Type:  UidmapPathAttr,
+					Value: []byte(c.newuidmapPath),
+				})
+			}
+			b, err := encodeIDMapping(c.config.UidMappings)
+			if err != nil {
+				return nil, err
+			}
+			r.AddData(&Bytemsg{
+				Type:  UidmapAttr,
+				Value: b,
+			})
+		}
+
+		// write gid mappings
+		if len(c.config.GidMappings) > 0 {
+			b, err := encodeIDMapping(c.config.GidMappings)
+			if err != nil {
+				return nil, err
+			}
+			r.AddData(&Bytemsg{
+				Type:  GidmapAttr,
+				Value: b,
+			})
+			if c.config.RootlessEUID && c.newgidmapPath != "" {
+				r.AddData(&Bytemsg{
+					Type:  GidmapPathAttr,
+					Value: []byte(c.newgidmapPath),
+				})
+			}
+			if requiresRootOrMappingTool(c.config) {
+				r.AddData(&Boolmsg{
+					Type:  SetgroupAttr,
+					Value: true,
+				})
+			}
+		}
+	}
+
+	if c.config.OomScoreAdj != nil {
+		// write oom_score_adj
+		r.AddData(&Bytemsg{
+			Type:  OomScoreAdjAttr,
+			Value: []byte(strconv.Itoa(*c.config.OomScoreAdj)),
+		})
+	}
+
+	// write rootless
+	r.AddData(&Boolmsg{
+		Type:  RootlessEUIDAttr,
+		Value: c.config.RootlessEUID,
+	})
+
+	// Bind mount source to open.
+	if it == initStandard && c.shouldSendMountSources() {
+		var mounts []byte
+		for _, m := range c.config.Mounts {
+			if m.IsBind() {
+				if strings.IndexByte(m.Source, 0) >= 0 {
+					return nil, fmt.Errorf("mount source string contains null byte: %q", m.Source)
+				}
+				mounts = append(mounts, []byte(m.Source)...)
+			}
+			mounts = append(mounts, byte(0))
+		}
+
+		r.AddData(&Bytemsg{
+			Type:  MountSourcesAttr,
+			Value: mounts,
+		})
+	}
+
+	return bytes.NewReader(r.Serialize()), nil
+}
+
 // ignoreTerminateErrors returns nil if the given err matches an error known
 // to indicate that the terminate occurred successfully or err was nil, otherwise
 // err is returned unaltered.
