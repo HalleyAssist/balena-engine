@@ -114,7 +114,7 @@ if [ -z "$DOCKER_DEBUG" ]; then
 fi
 
 LDFLAGS_STATIC=''
-EXTLDFLAGS_STATIC='-static -flto'
+EXTLDFLAGS_STATIC='-static -flto -fPIC'
 # ORIG_BUILDFLAGS is necessary for the cross target which cannot always build
 # with options like -race.
 ORIG_BUILDFLAGS=(-tags "netgo osusergo static_build $DOCKER_BUILDTAGS" -installsuffix netgo)
