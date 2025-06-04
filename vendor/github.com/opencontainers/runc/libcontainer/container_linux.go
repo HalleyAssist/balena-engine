@@ -1,6 +1,7 @@
 package libcontainer
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -768,6 +769,216 @@ func (c *linuxContainer) NotifyMemoryPressure(level PressureLevel) (<-chan struc
 		logrus.Warn("getting memory pressure notifications may fail if you don't have the full access to cgroups")
 	}
 	return notifyMemoryPressure(c.cgroupManager.Path("memory"), level)
+}
+
+func (c *linuxContainer) updateState(process parentProcess) (*State, error) {
+	if process != nil {
+		c.initProcess = process
+	}
+	state, err := c.currentState()
+	if err != nil {
+		return nil, err
+	}
+	err = c.saveState(state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func (c *linuxContainer) saveState(s *State) (retErr error) {
+	tmpFile, err := os.CreateTemp(c.root, "state-")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if retErr != nil {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
+		}
+	}()
+
+	err = utils.WriteJSON(tmpFile, s)
+	if err != nil {
+		return err
+	}
+	err = tmpFile.Close()
+	if err != nil {
+		return err
+	}
+
+	stateFilePath := filepath.Join(c.root, stateFilename)
+	return os.Rename(tmpFile.Name(), stateFilePath)
+}
+
+func (c *linuxContainer) currentStatus() (Status, error) {
+	if err := c.refreshState(); err != nil {
+		return -1, err
+	}
+	return c.state.status(), nil
+}
+
+// refreshState needs to be called to verify that the current state on the
+// container is what is true.  Because consumers of libcontainer can use it
+// out of process we need to verify the container's status based on runtime
+// information and not rely on our in process info.
+func (c *linuxContainer) refreshState() error {
+	paused, err := c.isPaused()
+	if err != nil {
+		return err
+	}
+	if paused {
+		return c.state.transition(&pausedState{c: c})
+	}
+	t := c.runType()
+	switch t {
+	case Created:
+		return c.state.transition(&createdState{c: c})
+	case Running:
+		return c.state.transition(&runningState{c: c})
+	}
+	return c.state.transition(&stoppedState{c: c})
+}
+
+func (c *linuxContainer) runType() Status {
+	if c.initProcess == nil {
+		return Stopped
+	}
+	pid := c.initProcess.pid()
+	stat, err := system.Stat(pid)
+	if err != nil {
+		return Stopped
+	}
+	if stat.StartTime != c.initProcessStartTime || stat.State == system.Zombie || stat.State == system.Dead {
+		return Stopped
+	}
+	// We'll create exec fifo and blocking on it after container is created,
+	// and delete it after start container.
+	if _, err := os.Stat(filepath.Join(c.root, execFifoFilename)); err == nil {
+		return Created
+	}
+	return Running
+}
+
+func (c *linuxContainer) isPaused() (bool, error) {
+	state, err := c.cgroupManager.GetFreezerState()
+	if err != nil {
+		return false, err
+	}
+	return state == configs.Frozen, nil
+}
+
+func (c *linuxContainer) currentState() (*State, error) {
+	var (
+		startTime           uint64
+		externalDescriptors []string
+		pid                 = -1
+	)
+	if c.initProcess != nil {
+		pid = c.initProcess.pid()
+		startTime, _ = c.initProcess.startTime()
+		externalDescriptors = c.initProcess.externalDescriptors()
+	}
+
+	intelRdtPath := ""
+	if c.intelRdtManager != nil {
+		intelRdtPath = c.intelRdtManager.GetPath()
+	}
+	state := &State{
+		BaseState: BaseState{
+			ID:                   c.ID(),
+			Config:               *c.config,
+			InitProcessPid:       pid,
+			InitProcessStartTime: startTime,
+			Created:              c.created,
+		},
+		Rootless:            c.config.RootlessEUID && c.config.RootlessCgroups,
+		CgroupPaths:         c.cgroupManager.GetPaths(),
+		IntelRdtPath:        intelRdtPath,
+		NamespacePaths:      make(map[configs.NamespaceType]string),
+		ExternalDescriptors: externalDescriptors,
+	}
+	if pid > 0 {
+		for _, ns := range c.config.Namespaces {
+			state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+		}
+		for _, nsType := range configs.NamespaceTypes() {
+			if !configs.IsNamespaceSupported(nsType) {
+				continue
+			}
+			if _, ok := state.NamespacePaths[nsType]; !ok {
+				ns := configs.Namespace{Type: nsType}
+				state.NamespacePaths[ns.Type] = ns.GetPath(pid)
+			}
+		}
+	}
+	return state, nil
+}
+
+func (c *linuxContainer) currentOCIState() (*specs.State, error) {
+	bundle, annotations := utils.Annotations(c.config.Labels)
+	state := &specs.State{
+		Version:     specs.Version,
+		ID:          c.ID(),
+		Bundle:      bundle,
+		Annotations: annotations,
+	}
+	status, err := c.currentStatus()
+	if err != nil {
+		return nil, err
+	}
+	state.Status = specs.ContainerState(status.String())
+	if status != Stopped {
+		if c.initProcess != nil {
+			state.Pid = c.initProcess.pid()
+		}
+	}
+	return state, nil
+}
+
+// orderNamespacePaths sorts namespace paths into a list of paths that we
+// can setns in order.
+func (c *linuxContainer) orderNamespacePaths(namespaces map[configs.NamespaceType]string) ([]string, error) {
+	paths := []string{}
+	for _, ns := range configs.NamespaceTypes() {
+
+		// Remove namespaces that we don't need to join.
+		if !c.config.Namespaces.Contains(ns) {
+			continue
+		}
+
+		if p, ok := namespaces[ns]; ok && p != "" {
+			// check if the requested namespace is supported
+			if !configs.IsNamespaceSupported(ns) {
+				return nil, fmt.Errorf("namespace %s is not supported", ns)
+			}
+			// only set to join this namespace if it exists
+			if _, err := os.Lstat(p); err != nil {
+				return nil, fmt.Errorf("namespace path: %w", err)
+			}
+			// do not allow namespace path with comma as we use it to separate
+			// the namespace paths
+			if strings.ContainsRune(p, ',') {
+				return nil, fmt.Errorf("invalid namespace path %s", p)
+			}
+			paths = append(paths, fmt.Sprintf("%s:%s", configs.NsName(ns), p))
+		}
+
+	}
+
+	return paths, nil
+}
+
+func encodeIDMapping(idMap []configs.IDMap) ([]byte, error) {
+	data := bytes.NewBuffer(nil)
+	for _, im := range idMap {
+		line := fmt.Sprintf("%d %d %d\n", im.ContainerID, im.HostID, im.Size)
+		if _, err := data.WriteString(line); err != nil {
+			return nil, err
+		}
+	}
+	return data.Bytes(), nil
 }
 
 func (c *linuxContainer) Checkpoint(criuOpts *CriuOpts) error {
