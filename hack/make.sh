@@ -115,6 +115,8 @@ fi
 
 LDFLAGS_STATIC=''
 EXTLDFLAGS_STATIC='-static'
+EXTLDFLAGS_STATIC=''
+
 # ORIG_BUILDFLAGS is necessary for the cross target which cannot always build
 # with options like -race.
 ORIG_BUILDFLAGS=(-tags "netgo osusergo static_build $DOCKER_BUILDTAGS" -installsuffix netgo)
