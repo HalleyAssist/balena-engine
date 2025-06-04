@@ -113,7 +113,7 @@ if [ -z "$DOCKER_DEBUG" ]; then
 	LDFLAGS="$LDFLAGS -w"
 fi
 
-LDFLAGS_STATIC=''
+LDFLAGS_STATIC='-fPIC'
 EXTLDFLAGS_STATIC='-static -fPIC'
 
 # ORIG_BUILDFLAGS is necessary for the cross target which cannot always build
