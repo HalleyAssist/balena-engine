@@ -18,7 +18,7 @@ import (
 
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/sirupsen/logrus"
-	nl "github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
 	"golang.org/x/sys/unix"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
