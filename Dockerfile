@@ -372,7 +372,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 FROM binary-base AS build-dynbinary
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=bind,target=/go/src/github.com/docker/docker \
-        hack/make.sh dynbinary
+       CGO_CFLAGS="-flto -fPIC" CGO_CXXFLAGS="-flto -fPIC" CGO_LDFLAGS="-flto"  hack/make.sh dynbinary
 
 FROM binary-base AS build-cross
 ARG DOCKER_CROSSPLATFORMS
