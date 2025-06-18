@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const STEP = 1024 * 1024 // 1MB
+const STEP = 256 * 1024 // 256KB
 
 const (
 	SYNC_FILE_RANGE_WAIT_BEFORE = 1
@@ -39,10 +39,13 @@ type eagerFileWriter struct {
 func (e *eagerFileWriter) Write(b []byte) (int, error) {
 	n, err := e.f.Write(b)
 	e.written += int64(n)
-	if e.written-e.synced >= STEP {
-		unix.SyncFileRange(int(e.f.Fd()), e.synced, STEP, SYNC_FILE_RANGE_WRITE)
-		time.Sleep(10 * time.Millisecond)
-		e.synced += STEP
+	d := e.written - e.synced
+	if d >= STEP {
+		d /= STEP
+		d *= STEP
+		unix.SyncFileRange(int(e.f.Fd()), e.synced, d, SYNC_FILE_RANGE_WRITE)
+		time.Sleep(1 * time.Millisecond)
+		e.synced += d
 	}
 	return n, err
 }
