@@ -526,7 +526,7 @@ func DecorateWithDeltaPatcher(layerData io.ReadCloser, deltaBase io.ReadSeeker) 
 			pW.Close()
 		}()
 
-		bucket := ratelimit.NewBucketWithRate(1500*1024, 1500*1024)
+		bucket := ratelimit.NewBucketWithRate(2500*1024, 2500*1024)
 
 		reader := ratelimit.Reader(pR, bucket)
 
