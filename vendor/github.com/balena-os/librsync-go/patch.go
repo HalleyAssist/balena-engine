@@ -74,8 +74,9 @@ func Patch(base io.ReadSeeker, delta io.Reader, out io.Writer) error {
 		return fmt.Errorf("Got magic number %x rather than expected value %x", magic, DELTA_MAGIC)
 	}
 
-	buf := make([]byte, 32 * 1024) // Buffer for CopyN
+	buf := make([]byte, 32*1024) // Buffer for CopyN
 
+	var streamPos int64 = -1
 	for {
 		var op Op
 		err := binary.Read(delta, binary.BigEndian, &op)
@@ -95,14 +96,22 @@ func Patch(base io.ReadSeeker, delta io.Reader, out io.Writer) error {
 
 		switch cmd.Kind {
 		default:
-			return fmt.Errorf("Bogus command %x", cmd.Kind)
+			err = fmt.Errorf("Bogus command %x", cmd.Kind)
 		case KIND_LITERAL:
-			CopyN(out, delta, param1, buf)
+			param2, err = CopyN(out, delta, param1, buf)
 		case KIND_COPY:
-			base.Seek(param1, io.SeekStart)
-			CopyN(out, base, param2, buf)
+			if streamPos == -1 || param1 != streamPos {
+				base.Seek(param1, io.SeekStart)
+				streamPos = param1
+			}
+			param2, err = CopyN(out, base, param2, buf)
+			streamPos += param2
 		case KIND_END:
 			return nil
+		}
+
+		if err != nil {
+			return err
 		}
 	}
 }
