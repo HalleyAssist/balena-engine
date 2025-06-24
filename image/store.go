@@ -232,6 +232,27 @@ func (is *store) GetTarSeekStream(id ID) (ioutils.ReadSeekCloser, error) {
 
 	var result ioutils.ReadSeekCloser
 
+	// if image is a single layer, return the layer stream directly
+	if len(img.RootFS.DiffIDs) == 1 {
+		if !system.IsOSSupported(img.OperatingSystem()) {
+			return nil, system.ErrNotSupportedOperatingSystem
+		}
+		l, err := is.lss[img.OperatingSystem()].Get(img.RootFS.ChainID())
+		if err != nil {
+			return nil, err
+		}
+
+		stream, err := l.TarSeekStream()
+		if err != nil {
+			return nil, err
+		}
+
+		return ioutils.NewReadSeekCloserWrapper(stream, func() error {
+			_, err := is.lss[img.OperatingSystem()].Release(l)
+			return err
+		}), nil
+	}
+
 	for i := range img.RootFS.DiffIDs {
 		rootFS := *img.RootFS
 		rootFS.DiffIDs = rootFS.DiffIDs[:i+1]
