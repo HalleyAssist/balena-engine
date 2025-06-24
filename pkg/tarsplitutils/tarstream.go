@@ -23,10 +23,17 @@ func max(x, y int) int {
 	return x
 }
 
+type ratState struct {
+	lastEntry string
+	lastFh    io.ReadCloser
+	lastPos   int64
+}
+
 type randomAccessTarStream struct {
 	entries      storage.Entries
 	entryOffsets []int64
 	fg           storage.FileGetter
+	state        *ratState
 }
 
 func (self randomAccessTarStream) ReadAt(p []byte, off int64) (int, error) {
@@ -35,6 +42,7 @@ func (self randomAccessTarStream) ReadAt(p []byte, off int64) (int, error) {
 
 	// The cursor will most likely be negative the first time. This signifies
 	// that we need to read some data first before starting to fill the buffer
+	// n = -ve position from start of the entry
 	n := self.entryOffsets[firstEntry] - off
 
 	for _, entry := range self.entries[firstEntry:] {
@@ -44,6 +52,12 @@ func (self randomAccessTarStream) ReadAt(p []byte, off int64) (int, error) {
 
 		switch entry.Type {
 		case storage.SegmentType:
+			if self.state.lastEntry != "" {
+				self.state.lastFh.Close()
+				self.state.lastFh = nil
+				self.state.lastEntry = ""
+			}
+
 			payload := entry.Payload
 			if n < 0 {
 				payload = payload[-n:]
@@ -56,17 +70,48 @@ func (self randomAccessTarStream) ReadAt(p []byte, off int64) (int, error) {
 				continue
 			}
 
-			fh, err := self.fg.Get(entry.GetName())
-			if err != nil {
-				return 0, err
+			var fh io.ReadCloser
+			var err error
+
+			entryName := entry.GetName()
+			if self.state.lastEntry == entryName {
+				fh = self.state.lastFh
+				if n >= 0 {
+					if seeker, ok := fh.(io.Seeker); ok {
+						seeker.Seek(0, io.SeekStart)
+						self.state.lastPos = 0
+					} else {
+						return 0, fmt.Errorf("Cannot seek in file %s, which is not a seeker", entryName)
+					}
+				}
+			} else {
+				if self.state.lastEntry != "" {
+					self.state.lastFh.Close()
+					self.state.lastFh = nil
+					self.state.lastEntry = ""
+				}
+				fh, err = self.fg.Get(entryName)
+				if err != nil {
+					return 0, err
+				}
+
+				if _, ok := fh.(io.Seeker); ok {
+					self.state.lastEntry = entryName
+					self.state.lastFh = fh
+					self.state.lastPos = 0
+				}
 			}
 
 			end := min(n+entry.Size, int64(len(p)))
 
 			if n < 0 {
 				if seeker, ok := fh.(io.Seeker); ok {
-					if _, err := seeker.Seek(-n, io.SeekStart); err != nil {
-						return 0, err
+					n = -n
+					if self.state.lastPos != n {
+						self.state.lastPos = n
+						if _, err := seeker.Seek(n, io.SeekStart); err != nil {
+							return 0, err
+						}
 					}
 				} else {
 					if _, err := io.CopyN(ioutil.Discard, fh, -n); err != nil {
@@ -78,12 +123,12 @@ func (self randomAccessTarStream) ReadAt(p []byte, off int64) (int, error) {
 
 			_, err = io.ReadFull(fh, p[n:end])
 
-			n += end - n
+			written := end - n
+			n += written
+			self.state.lastPos += written
 			if err != nil {
-				return 0, err
+				return 0, fmt.Errorf("Error reading file %s: %w", entryName, err)
 			}
-
-			fh.Close()
 		default:
 			return 0, fmt.Errorf("Unknown tar-split entry type: %v", entry.Type)
 		}
@@ -92,9 +137,18 @@ func (self randomAccessTarStream) ReadAt(p []byte, off int64) (int, error) {
 	return len(p), nil
 }
 
-func NewRandomAccessTarStream(fg storage.FileGetter, up storage.Unpacker) (io.ReadSeeker, error) {
+func (self randomAccessTarStream) Close() {
+	if self.state.lastEntry != "" {
+		self.state.lastFh.Close()
+		self.state.lastFh = nil
+		self.state.lastEntry = ""
+	}
+}
+
+func NewRandomAccessTarStream(fg storage.FileGetter, up storage.Unpacker) (io.ReadSeeker, randomAccessTarStream, error) {
 	stream := randomAccessTarStream{
-		fg: fg,
+		fg:    fg,
+		state: &ratState{},
 	}
 
 	size := int64(0)
@@ -104,7 +158,7 @@ func NewRandomAccessTarStream(fg storage.FileGetter, up storage.Unpacker) (io.Re
 			if err == io.EOF {
 				break
 			}
-			return nil, err
+			return nil, stream, err
 		}
 
 		stream.entryOffsets = append(stream.entryOffsets, size)
@@ -123,5 +177,5 @@ func NewRandomAccessTarStream(fg storage.FileGetter, up storage.Unpacker) (io.Re
 	// See implementation of ReadAt()
 	stream.entryOffsets = append(stream.entryOffsets, size)
 
-	return io.NewSectionReader(stream, 0, size), nil
+	return io.NewSectionReader(stream, 0, size), stream, nil
 }

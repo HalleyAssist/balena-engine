@@ -98,11 +98,13 @@ func Patch(base io.ReadSeeker, delta io.Reader, out io.Writer) error {
 		default:
 			err = fmt.Errorf("Bogus command %x", cmd.Kind)
 		case KIND_LITERAL:
-			param2, err = CopyN(out, delta, param1, buf)
+			_, err = CopyN(out, delta, param1, buf)
 		case KIND_COPY:
 			if streamPos == -1 || param1 != streamPos {
-				base.Seek(param1, io.SeekStart)
-				streamPos = param1
+				streamPos, err = base.Seek(param1, io.SeekStart)
+				if err != nil {
+					return fmt.Errorf("Seek to %d failed: %w", param1, err)
+				}
 			}
 			param2, err = CopyN(out, base, param2, buf)
 			streamPos += param2
@@ -111,7 +113,7 @@ func Patch(base io.ReadSeeker, delta io.Reader, out io.Writer) error {
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("Error while processing command %x: %w", cmd.Kind, err)
 		}
 	}
 }

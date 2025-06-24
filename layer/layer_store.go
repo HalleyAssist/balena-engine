@@ -794,12 +794,13 @@ func (ls *layerStore) getTarSeekStream(rl *roLayer) (ioutils.ReadSeekCloser, err
 
 	metaUnpacker := storage.NewJSONUnpacker(metadata)
 
-	stream, err := tarsplitutils.NewRandomAccessTarStream(fileGetCloser, metaUnpacker)
+	stream, ras, err := tarsplitutils.NewRandomAccessTarStream(fileGetCloser, metaUnpacker)
 	if err != nil {
 		return nil, err
 	}
 
 	return ioutils.NewReadSeekCloserWrapper(stream, func() error {
+		ras.Close()
 		return fileGetCloser.Close()
 	}), nil
 }
