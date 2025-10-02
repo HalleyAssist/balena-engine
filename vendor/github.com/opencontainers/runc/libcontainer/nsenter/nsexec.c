@@ -999,7 +999,10 @@ void nsexec(void)
 
 			/* Start the process of getting a container. */
 			write_log(DEBUG, "spawn stage-1");
+			
+			setenv("GO_OPENSSL_SKIP", "y", 1);
 			stage1_pid = clone_parent(&env, STAGE_CHILD);
+			setenv("GO_OPENSSL_SKIP", "", 1);
 			if (stage1_pid < 0)
 				bail("unable to spawn stage-1");
 
@@ -1150,6 +1153,9 @@ void nsexec(void)
 	case STAGE_CHILD:{
 			pid_t stage2_pid = -1;
 			enum sync_t s;
+
+			// set env var GO_OPENSSL_SKIP
+			setenv("GO_OPENSSL_SKIP", "y", 1);
 
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_child_pipe[0];
@@ -1326,6 +1332,9 @@ void nsexec(void)
 			 * start_child() code after forking in the parent.
 			 */
 			enum sync_t s;
+
+			setenv("GO_OPENSSL_SKIP", "y", 1);
+			write_log(WARNING, "set GO_OPENSSL_SKIP");
 
 			/* We're in a child and thus need to tell the parent if we die. */
 			syncfd = sync_grandchild_pipe[0];
