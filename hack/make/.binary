@@ -89,6 +89,7 @@ hash_files() {
 		$LDFLAGS_STATIC_DOCKER
 		$DOCKER_LDFLAGS
 	" \
+	    -trimpath \
 		${GO_PACKAGE}
 )
 
