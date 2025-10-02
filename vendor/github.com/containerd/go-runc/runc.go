@@ -232,6 +232,7 @@ func (r *Runc) Exec(context context.Context, id string, spec specs.Process, opts
 		}
 		return nil
 	}
+	cmd.Env = append(cmd.Env, "GO_OPENSSL_SKIP=y")
 	ec, err := Monitor.Start(cmd)
 	if err != nil {
 		return err
@@ -271,6 +272,7 @@ func (r *Runc) Run(context context.Context, id, bundle string, opts *CreateOpts)
 	if opts != nil && opts.IO != nil {
 		opts.Set(cmd)
 	}
+	cmd.Env = append(cmd.Env, "GO_OPENSSL_SKIP=y")
 	ec, err := Monitor.Start(cmd)
 	if err != nil {
 		return -1, err
