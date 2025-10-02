@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-msgpack/codec"
-	"github.com/sean-/seed"
 )
 
 // pushPullScale is the minimum number of nodes
@@ -28,10 +27,6 @@ const (
 	// Constant litWidth 2-8
 	lzwLitWidth = 8
 )
-
-func init() {
-	seed.Init()
-}
 
 // Decode reverses the encode operation on a byte slice input
 func decode(buf []byte, out interface{}) error {

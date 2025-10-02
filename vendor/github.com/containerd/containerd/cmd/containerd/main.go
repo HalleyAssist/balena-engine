@@ -21,12 +21,7 @@ import (
 	"os"
 
 	"github.com/containerd/containerd/cmd/containerd/command"
-	"github.com/containerd/containerd/pkg/seed"
 )
-
-func init() {
-	seed.WithTimeAndRand()
-}
 
 func Main() {
 	app := command.App()
