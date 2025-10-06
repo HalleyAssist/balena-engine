@@ -1000,9 +1000,7 @@ void nsexec(void)
 			/* Start the process of getting a container. */
 			write_log(DEBUG, "spawn stage-1");
 			
-			setenv("GO_OPENSSL_SKIP", "y", 1);
 			stage1_pid = clone_parent(&env, STAGE_CHILD);
-			setenv("GO_OPENSSL_SKIP", "", 1);
 			if (stage1_pid < 0)
 				bail("unable to spawn stage-1");
 
