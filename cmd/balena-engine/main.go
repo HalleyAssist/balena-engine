@@ -51,6 +51,7 @@ func main() {
 		ctr.Main()
 	case "balena-runc", "balena-engine-runc":
 		runtime.GOMAXPROCS(1)
+		debug.SetGCPercent(5)
 		runc.Main()
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown command: %v\n", command)
