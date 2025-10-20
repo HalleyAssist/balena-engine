@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/fileutils"
-	"go.etcd.io/bbolt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
@@ -131,11 +130,6 @@ type Daemon struct {
 
 	attachmentStore       network.AttachmentStore
 	attachableNetworkLock *locker.Locker
-
-	// This is used for Windows which doesn't currently support running on containerd
-	// It stores metadata for the content store (used for manifest caching)
-	// This needs to be closed on daemon exit
-	mdDB *bbolt.DB
 }
 
 // StoreHosts stores the addresses the daemon is listening on
@@ -1172,14 +1166,7 @@ func NewDaemon(ctx context.Context, config *config.Config, pluginStore *plugin.S
 	if d.containerdCli != nil {
 		imgSvcConfig.Leases = d.containerdCli.LeasesService()
 		imgSvcConfig.ContentStore = d.containerdCli.ContentStore()
-	} else {
-		cs, lm, err := d.configureLocalContentStore()
-		if err != nil {
-			return nil, err
-		}
-		imgSvcConfig.ContentStore = cs
-		imgSvcConfig.Leases = lm
-	}
+	} 
 
 	// TODO: imageStore, distributionMetadataStore, and ReferenceStore are only
 	// used above to run migration. They could be initialized in ImageService
@@ -1348,10 +1335,6 @@ func (daemon *Daemon) Shutdown() error {
 
 	if daemon.containerdCli != nil {
 		daemon.containerdCli.Close()
-	}
-
-	if daemon.mdDB != nil {
-		daemon.mdDB.Close()
 	}
 
 	return daemon.cleanupMounts()
