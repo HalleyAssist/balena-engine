@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const signalBufferSize = 2048
+const signalBufferSize = 1024
 
 // newSignalHandler returns a signal handler for processing SIGCHLD and SIGWINCH signals
 // while still forwarding all other signals to the process.
